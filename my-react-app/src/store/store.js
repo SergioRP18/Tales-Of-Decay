@@ -1,7 +1,7 @@
 import { configureStore, createSlice, createAsyncThunk } from "@reduxjs/toolkit";
-import { signInAnon } from "../firebase";
+import { signInAnon } from "../services/firebaseConfig.js"
 import { getFirestore, doc, setDoc, getDoc } from "firebase/firestore";
-import { auth } from "../firebase";
+import { auth } from "../services/firebaseConfig.js";
 
 // Async thunk para iniciar sesión anónima
 export const signInAnonymous = createAsyncThunk(
