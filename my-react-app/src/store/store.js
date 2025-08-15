@@ -8,7 +8,9 @@ export const signInAnonymous = createAsyncThunk(
   "user/signInAnonymous",
   async () => {
     const userCredential = await signInAnon();
-    return userCredential.user;
+    return {
+            uid: userCredential.user.uid
+          };
   }
 );
 
@@ -18,7 +20,7 @@ export const saveUsername = createAsyncThunk(
   async (username, { getState }) => {
     const db = getFirestore();
     const uid = auth.currentUser.uid;
-    await setDoc(doc(db, "users", uid), { username });
+    await setDoc(doc(db, "players", uid), { username }, { merge: true });
     return username;
   }
 );
