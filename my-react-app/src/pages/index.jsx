@@ -6,3 +6,4 @@ export { default as LobbyScreen } from "./Lobby/Lobby";
 export { default as LoginScreen } from "./Login/Login";
 export { default as ResultsScreen } from "./Results/Results";
 export { default as WaitingScreen } from "./WaitingScreen/WaitingScreen";
+export { default as Home } from "./Home/Home";

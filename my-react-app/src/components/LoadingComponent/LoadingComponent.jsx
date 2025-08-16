@@ -6,7 +6,7 @@ const LoadingComponent = () => {
 
   useEffect(() => {
     const timer = setTimeout(() => {
-      navigate("/login");
+      navigate("/select");
     }, 2000); // 2000 ms = 2 segundos
 
     return () => clearTimeout(timer);
