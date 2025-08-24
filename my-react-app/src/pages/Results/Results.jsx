@@ -1,7 +1,19 @@
 import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import LoadingComponent from "../../components/LoadingComponent/LoadingComponent";
 
 const ResultsScreen = () => {
     const navigate = useNavigate();
+    const [loading, setLoading] = useState(true);
+
+    useEffect(() => {
+        const timer = setTimeout(() => setLoading(false), 2000); // 2 segundos de loading
+        return () => clearTimeout(timer);
+    }, []);
+
+    if (loading) {
+        return <LoadingComponent />;
+    }
 
     return (
         <div style={{ textAlign: "center", marginTop: "10vh" }}>
