@@ -11,6 +11,7 @@ const WaitingScreen = () => {
     const [isHost, setIsHost] = useState(false);
     const [gameStarted, setGameStarted] = useState(false);
     const [count, setCount] = useState(COUNTDOWN_SECONDS);
+    const [showPreview, setShowPreview] = useState(false);
 
     // Detecta si el usuario actual es el host y escucha el estado de la sala
     useEffect(() => {
@@ -32,8 +33,12 @@ const WaitingScreen = () => {
     useEffect(() => {
         if (!gameStarted) return;
         if (count === 0) {
-            navigate("/game");
-            return;
+            setShowPreview(true);
+            // Muestra la preview por 2 segundos antes de navegar
+            const previewTimer = setTimeout(() => {
+                navigate(`/game/${roomId}`);
+            }, 2000);
+            return () => clearTimeout(previewTimer);
         }
         const timer = setTimeout(() => setCount(count - 1), 1000);
         return () => clearTimeout(timer);
@@ -45,6 +50,49 @@ const WaitingScreen = () => {
         const roomRef = doc(db, "rooms", roomId);
         await updateDoc(roomRef, { gameStarted: true });
     };
+
+    if (showPreview) {
+        return (
+            <div style={{
+                display: "flex",
+                justifyContent: "center",
+                alignItems: "center",
+                height: "100vh",
+                background: "#181818"
+            }}>
+                <span className="preview-message">
+                    Debes ser rápido, tu vida depende de ello
+                </span>
+                <style>
+                {`
+                    .preview-message {
+                        font-size: 2em;
+                        color: #fff;
+                        animation: zoomFade 2s forwards;
+                    }
+                    @keyframes zoomFade {
+                        0% {
+                            opacity: 0;
+                            transform: scale(0.8);
+                        }
+                        20% {
+                            opacity: 1;
+                            transform: scale(1.1);
+                        }
+                        80% {
+                            opacity: 1;
+                            transform: scale(1.2);
+                        }
+                        100% {
+                            opacity: 0;
+                            transform: scale(1.4);
+                        }
+                    }
+                `}
+                </style>
+            </div>
+        );
+    }
 
     if (gameStarted) {
         return (

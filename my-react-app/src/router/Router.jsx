@@ -10,7 +10,7 @@ const Router = () => {
             <Route path="/select" element={<Home />} />
             <Route path="/login" element={<LoginScreen />} />
             <Route path="/lobby" element={<LobbyScreen />} />
-            <Route path="/game" element={<GameScreen />} />
+            <Route path="/game/:roomId" element={<GameScreen />} />
             <Route path="/join-room" element={<JoinRoomScreen />} />
             <Route path="/join-room/:roomId" element={<JoinRoomScreen />} />
             <Route path="/waiting/:roomId" element={<WaitingScreen />} />

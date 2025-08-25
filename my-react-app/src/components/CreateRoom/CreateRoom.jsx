@@ -30,6 +30,7 @@ const CreateRoom = () => {
 
   return (
     <div>
+      <img src="https://github.com/SergioRP18/Logo-The-Last-Card/blob/main/Logo-TheLastCard.png?raw=true" alt="" />
       <form onSubmit={handleCreate}>
         <input
           type="text"

@@ -11,7 +11,7 @@ const LoadingComponent = () => (
     color: "#fff"
   }}>
     <img
-      src="/logo192.png"
+      src="https://github.com/SergioRP18/Logo-The-Last-Card/blob/main/Logo-TheLastCard.png?raw=true"
       alt="Logo"
       style={{ width: 100, marginBottom: 24 }}
     />

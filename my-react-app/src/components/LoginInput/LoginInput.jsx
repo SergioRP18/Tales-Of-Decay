@@ -29,9 +29,6 @@ const LoginInput = () => {
     return (
         <>
             <div>
-                <div>
-                    <img src="#" alt="logo-app" />
-                </div>
                 <form onSubmit={handleJoin}>
                     <input
                         type="text"
@@ -52,9 +49,6 @@ const LoginInput = () => {
                     <button type="submit">Unirme</button>
                 </form>
                 {error && <div style={{ color: "red" }}>{error}</div>}
-                <div>
-                    <p>© 2025 DMI - Salazar, Lopera & Sergio. Todos los derechos reservados.</p>
-                </div>
             </div>
         </>
     );

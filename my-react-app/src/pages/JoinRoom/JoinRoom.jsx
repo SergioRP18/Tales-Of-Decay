@@ -30,6 +30,7 @@ const JoinRoomScreen = () => {
 
     return (
         <div>
+            <img src="https://github.com/SergioRP18/Logo-The-Last-Card/blob/main/Logo-TheLastCard.png?raw=true" alt="logo-app" />
             <form onSubmit={handleJoin}>
                 <input
                     type="text"
@@ -46,6 +47,9 @@ const JoinRoomScreen = () => {
                 <button type="submit">Unirme</button>
             </form>
             {error && <div style={{ color: "red" }}>{error}</div>}
+            <div>
+                <p>© 2025 DMI - Salazar, Lopera & Sergio. Todos los derechos reservados.</p>
+            </div>
         </div>
     );
 };

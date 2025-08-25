@@ -34,7 +34,8 @@ export async function createRoom(hostUsername) {
   await setDoc(doc(db, "rooms", roomCode), {
     players: [hostPlayer],
     status: "waiting",
-    createdAt: Date.now()
+    createdAt: Date.now(),
+    currentChapter: "chapter_01" // <-- ¡Agrega esta línea!
   });
 
   return roomCode;
