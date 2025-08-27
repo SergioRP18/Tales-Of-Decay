@@ -7,7 +7,6 @@ const LoadingComponent = () => (
     alignItems: "center",
     justifyContent: "center",
     height: "100vh",
-    background: "#181818",
     color: "#fff"
   }}>
     <img
