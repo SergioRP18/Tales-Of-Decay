@@ -30,7 +30,7 @@ const JoinRoomScreen = () => {
 
     return (
         <div>
-            <img src="https://github.com/SergioRP18/Logo-The-Last-Card/blob/main/Logo-TheLastCard.png?raw=true" alt="logo-app" />
+            <img src="https://raw.githubusercontent.com/SergioRP18/Logo-The-Last-Card/63b41668478c96474e4e0ef35e1d5abee18ea249/Logo_ToD.svg" alt="logo-app" />
             <form onSubmit={handleJoin}>
                 <input
                     type="text"
