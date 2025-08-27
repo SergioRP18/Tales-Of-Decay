@@ -6,6 +6,11 @@ import { submitVote, getVotes, clearVotes } from "../../services/voteService";
 import { submitSacrifice } from "../../services/sacrificeService";
 import { auth } from "../../services/firebaseConfig";
 import { getFirestore, doc, getDoc, updateDoc } from "firebase/firestore";
+import {
+  savePlayerAnswer,
+  savePlayerVote,
+  markPlayerEliminated
+} from "../../services/gameStatsService";
 
 const GameScreen = () => {
   const { roomId } = useParams();
@@ -16,6 +21,7 @@ const GameScreen = () => {
   const [voteResults, setVoteResults] = useState(null);
   const [players, setPlayers] = useState([]);
   const [hoarder, setHoarder] = useState(null); // Nuevo estado para el acaparador
+  const [startTime, setStartTime] = useState(null);
   const navigate = useNavigate();
 
   // Carga el capítulo actual y jugadores al montar o cuando roomId cambia
@@ -112,13 +118,29 @@ const GameScreen = () => {
     }, 2000);
   };
 
+  // Busca el username del jugador actual
+  const currentPlayer = players.find(p => p.uid === auth.currentUser.uid);
+  const username = currentPlayer ? currentPlayer.username : "Desconocido";
+
   // --- RESPUESTA NORMAL ---
   const handleTimerEnd = async () => {
     setOptionsEnabled(false);
+    const responseTime = startTime ? Date.now() - startTime : null;
+
     if (!selectedOption) {
+      await markPlayerEliminated(roomId, auth.currentUser.uid, chapter.id);
       navigate("/game-over", { state: { reason: "no-selection" } });
     } else if (chapter.type === "decision") {
       const chosen = chapter.options?.find(opt => opt.id === selectedOption);
+      await savePlayerAnswer(
+        roomId,
+        auth.currentUser.uid,
+        username,
+        chapter.id,
+        selectedOption,
+        !!chosen?.isCorrect,
+        responseTime // <-- Nuevo parámetro
+      );
       if (!chosen || !chosen.isCorrect) {
         navigate("/game-over", { state: { reason: "wrong-answer" } });
       } else {
@@ -126,10 +148,22 @@ const GameScreen = () => {
         window.location.reload();
       }
     } else if (chapter.type === "vote") {
+      await savePlayerVote(
+        roomId,
+        auth.currentUser.uid,
+        username,
+        chapter.id,
+        selectedOption,
+        responseTime // <-- Nuevo parámetro
+      );
       await submitVote(roomId, auth.currentUser.uid, selectedOption);
       setOptionsEnabled(false);
     }
   };
+
+  useEffect(() => {
+    setStartTime(Date.now());
+  }, [chapter]);
 
   if (loading) return <div>Cargando capítulo...</div>;
   if (!chapter) return <div>No se encontró el capítulo.</div>;
@@ -145,7 +179,7 @@ const GameScreen = () => {
       </p>
       <TimerInput
         isAnswerPhase={true}
-        answerSeconds={30}
+        answerSeconds={45}
         onAnswerEnd={handleTimerEnd}
       />
 
