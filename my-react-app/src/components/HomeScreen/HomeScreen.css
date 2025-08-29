@@ -1,0 +1,33 @@
+.generalInfo{
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  min-height:100dvh;
+  text-align:center;
+  width:100%;
+}
+
+.buttonsLogIn{
+  display:flex;
+  flex-direction:column;
+  gap: 0.75rem;          /* ← separación entre botones */
+  width: min(320px, 90%);/* ancho cómodo */
+  margin-inline:auto;    /* centrar el bloque */
+}
+
+/* Estética opcional */
+.buttonsLogIn button{
+  padding: .65rem 1rem;
+  border-radius: .5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.credits{
+    color: white;
+}
+
+/* Mobile */
+@media (max-width: 48rem){
+  .logo{ width:100%; padding:0; }
+}

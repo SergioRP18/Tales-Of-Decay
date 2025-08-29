@@ -1,0 +1,25 @@
+
+
+@media (max-width: 48rem){
+  .logoRoom{ width:100%; padding: 0%;}
+
+  .createRoomForm{
+    display: flex;
+    flex-direction: column;
+  }
+  .generalCreateRoom{
+    justify-content: center;
+  }
+  .enterUser{
+ height: 35px;
+  border-radius: 8px;
+  padding: 0.2rem;
+  align-content: center;
+  text-align: center;   /* 👈 centra el texto y el placeholder */
+  font-size: 1rem;      /* opcional, para que se vea más claro */
+  background-color: transparent;
+    margin-bottom: 1rem;   /* 👈 espacio entre input y botón */
+color: white;
+  }
+}
+
