@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { getFirestore, doc, onSnapshot, updateDoc } from "firebase/firestore";
 import { auth } from "../../services/firebaseConfig";
+import "./WaitingScreen.css"
 
 const COUNTDOWN_SECONDS = 10;
 
@@ -96,7 +97,9 @@ const WaitingScreen = () => {
 
     if (gameStarted) {
         return (
-            <div style={{ textAlign: "center", marginTop: "10vh" }}>
+
+            
+            <div className="loading"> 
                 <h2>¡El juego comenzará pronto!</h2>
                 <h3>Comenzando en {count}...</h3>
             </div>
@@ -104,7 +107,7 @@ const WaitingScreen = () => {
     }
 
     return (
-        <div style={{ textAlign: "center", marginTop: "10vh" }}>
+        <div  className="generalWaitingScreen">
             <h2>¡Sala creada!</h2>
             <p>Código de sala: <strong>{roomId}</strong></p>
             <p>Comparte este código con tus amigos para que se unan.</p>
