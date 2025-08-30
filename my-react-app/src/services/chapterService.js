@@ -10,7 +10,7 @@ export async function getCurrentChapter(roomId) {
   const chapterSnap = await getDoc(doc(db, "chapters", currentChapter));
   if (!chapterSnap.exists()) throw new Error("Chapter not found");
   return chapterSnap.data();
-}
+};
 
 // Avanza al siguiente capítulo
 export async function advanceToNextChapter(roomId, nextChapterId) {
@@ -18,4 +18,17 @@ export async function advanceToNextChapter(roomId, nextChapterId) {
   await updateDoc(doc(db, "rooms", roomId), {
     currentChapter: nextChapterId
   });
-}
+};
+
+export const selectPlayer = async (roomId, players) => {
+  const db = getFirestore();
+  const roomRef = doc(db, "rooms", roomId);
+
+  // Seleccionar aleatoriamente un jugador
+  const selectedPlayer = players[Math.floor(Math.random() * players.length)];
+  await updateDoc(roomRef, {
+    selectedPlayerId: selectedPlayer.uid,
+  });
+
+  return selectedPlayer;
+};

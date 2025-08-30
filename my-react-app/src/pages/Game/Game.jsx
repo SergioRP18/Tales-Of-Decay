@@ -31,25 +31,27 @@ const GameScreen = () => {
       try {
         const data = await getCurrentChapter(roomId);
         setChapter(data);
-        // Carga jugadores
+
+        // Cargar jugadores
         const db = getFirestore();
         const roomRef = doc(db, "rooms", roomId);
         const roomSnap = await getDoc(roomRef);
         const loadedPlayers = roomSnap.data().players || [];
         setPlayers(loadedPlayers);
 
-        // --- Lógica especial para capítulo 6 ---
-        if (data.id === "chapter_06") {
-          let hoarderId = roomSnap.data().hoarderId;
-          // Si no hay acaparador, elige uno aleatorio y guárdalo en room
-          if (!hoarderId && loadedPlayers.length > 0) {
+        // Lógica especial para capítulos 3 y 6
+        if (data.id === "chapter_03" || data.id === "chapter_06") {
+          let selectedPlayerId = roomSnap.data().selectedPlayerId;
+
+          if (!selectedPlayerId && loadedPlayers.length > 0) {
             const randomPlayer = loadedPlayers[Math.floor(Math.random() * loadedPlayers.length)];
-            hoarderId = randomPlayer.uid;
-            await updateDoc(roomRef, { hoarderId });
+            selectedPlayerId = randomPlayer.uid;
+            await updateDoc(roomRef, { selectedPlayerId });
           }
-          // Busca el jugador acaparador y guárdalo en estado
-          const hoarderPlayer = loadedPlayers.find(p => p.uid === hoarderId);
-          setHoarder(hoarderPlayer);
+
+          // Buscar jugador seleccionado
+          const selectedPlayer = loadedPlayers.find(p => p.uid === selectedPlayerId);
+          setHoarder(selectedPlayer);
         } else {
           setHoarder(null);
         }
@@ -58,15 +60,16 @@ const GameScreen = () => {
       }
       setSelectedOption(null);
       setVoteResults(null);
-      setOptionsEnabled(true); // Habilita opciones al cargar capítulo
+      setOptionsEnabled(true);
       setLoading(false);
     };
     fetchChapter();
   }, [roomId]);
 
+
   // --- VOTACIÓN ---
   useEffect(() => {
-    if (chapter?.type === "vote") {
+    if (chapter?.type === "vote" && (chapter.id === "chapter_03" || chapter.id === "chapter_06")) {
       const interval = setInterval(async () => {
         const votes = await getVotes(roomId);
         if (votes.length === players.length && players.length > 0) {
@@ -85,18 +88,19 @@ const GameScreen = () => {
           setOptionsEnabled(false);
 
           setTimeout(async () => {
-            // --- Lógica especial para capítulo 6: eliminar acaparador si es "matar" ---
+            // --- Lógica especial para capítulo 3 y 6: eliminar o salvar ---
             if (
-              chapter.id === "chapter_06" &&
-              winningOption === "kill_hoarder" &&
+              (chapter.id === "chapter_03" || chapter.id === "chapter_06") &&
+              winningOption === "eliminate_player" &&
               hoarder
             ) {
               const db = getFirestore();
               const roomRef = doc(db, "rooms", roomId);
-              // Filtra al acaparador del array de jugadores
+              // Filtra al jugador eliminado
               const updatedPlayers = players.filter(p => p.uid !== hoarder.uid);
               await updateDoc(roomRef, { players: updatedPlayers });
             }
+
             await clearVotes(roomId);
             await advanceToNextChapter(roomId, chapter.nextChapter);
             window.location.reload();
@@ -106,6 +110,7 @@ const GameScreen = () => {
       return () => clearInterval(interval);
     }
   }, [chapter, players.length, roomId, players, hoarder]);
+
 
   // --- SACRIFICIO ---
   const handleSacrifice = async (sacrificedPlayerId) => {
@@ -237,7 +242,7 @@ const GameScreen = () => {
                 color: selectedOption === opt.id ? "#222" : undefined,
               }}
             >
-              {opt.text}
+              {opt.text.replace("{hoarder}", hoarder ? hoarder.username : "el acaparador")}
             </button>
           ))}
         </div>

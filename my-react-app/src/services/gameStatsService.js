@@ -15,7 +15,12 @@ export async function savePlayerAnswer(roomId, playerId, username, chapterId, se
       timestamp: Date.now()
     })
   }, { merge: true });
-}
+
+  if (!isCorrect && selectedOption === "eliminate_player") {
+    const updatedPlayers = players.filter(p => p.uid !== playerId);
+    await updateDoc(roomRef, { players: updatedPlayers });
+  }
+};
 
 export async function savePlayerVote(roomId, playerId, username, chapterId, optionId, responseTime) {
   const db = getFirestore();
