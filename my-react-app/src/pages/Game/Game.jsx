@@ -169,197 +169,101 @@ const GameScreen = () => {
   if (!chapter) return <div>No se encontró el capítulo.</div>;
 
   return (
-    <div>
-      <h2>{chapter.title}</h2>
-      <p>
-        {/* Personaliza la narrativa para capítulo 6 */}
-        {chapter.id === "chapter_06" && hoarder
-          ? `El acaparador es: ${hoarder.username}. ${chapter.narrative}`
-          : chapter.narrative}
-      </p>
-      <TimerInput
-        isAnswerPhase={true}
-        answerSeconds={45}
-        onAnswerEnd={handleTimerEnd}
-      />
-
-      {/* DECISION NORMAL */}
-      {chapter.type === "decision" && chapter.options && (
-        <div>
-          {chapter.options.map(opt => (
-            <button
-              key={opt.id}
-              disabled={!optionsEnabled}
-              onClick={() => setSelectedOption(opt.id)}
-              style={{
-                background: selectedOption === opt.id ? "#ffd700" : undefined,
-                color: selectedOption === opt.id ? "#222" : undefined,
-              }}
-            >
-              {opt.text}
-            </button>
-          ))}
+    <div className="gs">
+      {/* Cabecera: título/subtítulo y timer arriba derecha */}
+      <div className="gs-header">
+        <div className="gs-titleBlock">
+          <h1 className="gs-title">{chapter.title}</h1>
+          {chapter.subtitle && <h2 className="gs-subtitle">{chapter.subtitle}</h2>}
+          <div className="gs-skull" aria-hidden>☠</div>
         </div>
-      )}
-
-      {/* VOTACIÓN - Capítulo 6 personalizado */}
-      {chapter.type === "vote" && chapter.id === "chapter_06" && chapter.voteOptions && !voteResults && (
-        <div>
-          <p>¿Qué hacer con {hoarder ? hoarder.username : "el acaparador"}?</p>
-          {chapter.voteOptions.map(opt => (
-            <button
-              key={opt.id}
-              disabled={!optionsEnabled}
-              onClick={() => setSelectedOption(opt.id)}
-              style={{
-                background: selectedOption === opt.id ? "#ffd700" : undefined,
-                color: selectedOption === opt.id ? "#222" : undefined,
-              }}
-            >
-              {/* Reemplaza {hoarder} en el texto de la opción */}
-              {opt.text.replace("{hoarder}", hoarder ? hoarder.username : "el acaparador")}
-            </button>
-          ))}
+  
+        <div className="gs-timer">
+          <TimerInput
+            isAnswerPhase={true}
+            answerSeconds={45}
+            onAnswerEnd={handleTimerEnd}
+          />
         </div>
+      </div>
+  
+      {/* Narrativa (puedes ocultarla si no va en esta pantalla) */}
+      {chapter.narrative && (
+        <p className="gs-narrative">
+          {chapter.id === "chapter_06" && hoarder
+            ? `El acaparador es: ${hoarder.username}. ${chapter.narrative}`
+            : chapter.narrative}
+        </p>
       )}
-
-      {/* VOTACIÓN - Otros capítulos */}
-      {chapter.type === "vote" && chapter.id !== "chapter_06" && chapter.voteOptions && !voteResults && (
-        <div>
-          <p>Vota tu opción:</p>
-          {chapter.voteOptions.map(opt => (
-            <button
-              key={opt.id}
-              disabled={!optionsEnabled}
-              onClick={() => setSelectedOption(opt.id)}
-              style={{
-                background: selectedOption === opt.id ? "#ffd700" : undefined,
-                color: selectedOption === opt.id ? "#222" : undefined,
-              }}
-            >
-              {opt.text}
-            </button>
-          ))}
-        </div>
-      )}
-
-      {/* Resultados de la votación */}
+  
+      {/* Opciones (decision / vote) */}
+      <div className="gs-options">
+        {chapter.type === "decision" && chapter.options?.map(opt => (
+          <button
+            key={opt.id}
+            className={`gs-option ${selectedOption === opt.id ? "is-selected" : ""}`}
+            disabled={!optionsEnabled}
+            onClick={() => setSelectedOption(opt.id)}
+          >
+            {opt.text}
+          </button>
+        ))}
+  
+        {chapter.type === "vote" && chapter.id === "chapter_06" && chapter.voteOptions && !voteResults && (
+          <>
+            {chapter.voteOptions.map(opt => (
+              <button
+                key={opt.id}
+                className={`gs-option ${selectedOption === opt.id ? "is-selected" : ""}`}
+                disabled={!optionsEnabled}
+                onClick={() => setSelectedOption(opt.id)}
+              >
+                {opt.text.replace("{hoarder}", hoarder ? hoarder.username : "el acaparador")}
+              </button>
+            ))}
+          </>
+        )}
+  
+        {chapter.type === "vote" && chapter.id !== "chapter_06" && chapter.voteOptions && !voteResults && (
+          <>
+            {chapter.voteOptions.map(opt => (
+              <button
+                key={opt.id}
+                className={`gs-option ${selectedOption === opt.id ? "is-selected" : ""}`}
+                disabled={!optionsEnabled}
+                onClick={() => setSelectedOption(opt.id)}
+              >
+                {opt.text}
+              </button>
+            ))}
+          </>
+        )}
+      </div>
+  
+      {/* Resultados de votación / sacrificio (tu contenido actual) */}
       {voteResults && (
-        <div
-          style={{
-            margin: "2em auto",
-            padding: "2em",
-            background: "#222",
-            borderRadius: "16px",
-            maxWidth: 400,
-            color: "#fff",
-            boxShadow: "0 0 16px #0008",
-            animation: "fadeInScale 1s"
-          }}
-        >
-          <h2 style={{ color: "#ffd700" }}>¡Votación finalizada!</h2>
-          {chapter.voteOptions.map(opt => (
-            <div
-              key={opt.id}
-              style={{
-                margin: "1em 0",
-                padding: "1em",
-                borderRadius: "8px",
-                background:
-                  voteResults.winningOption === opt.id
-                    ? "linear-gradient(90deg, #ffd700 60%, #fffbe6 100%)"
-                    : "#333",
-                color: voteResults.winningOption === opt.id ? "#222" : "#fff",
-                fontWeight: voteResults.winningOption === opt.id ? "bold" : "normal",
-                fontSize: voteResults.winningOption === opt.id ? "1.2em" : "1em",
-                transition: "all 0.3s"
-              }}
-            >
-              <span>
-                {/* Personaliza el texto de resultado para capítulo 6 */}
-                {chapter.id === "chapter_06"
-                  ? opt.text.replace("{hoarder}", hoarder ? hoarder.username : "el acaparador")
-                  : opt.text}
-                : <b>{voteResults.counts[opt.id] || 0} votos</b>
-              </span>
-              <br />
-              <span style={{ fontSize: "0.9em" }}>
-                {voteResults.votersByOption?.[opt.id]?.length > 0
-                  ? "Votaron: " +
-                    voteResults.votersByOption[opt.id].join(", ")
-                  : ""}
-              </span>
-              {voteResults.winningOption === opt.id && (
-                <span style={{ marginLeft: 8, color: "#b8860b" }}> ← Ganador</span>
-              )}
-            </div>
-          ))}
-          <style>
-            {`
-              @keyframes fadeInScale {
-                0% { opacity: 0; transform: scale(0.8);}
-                100% { opacity: 1; transform: scale(1);}
-              }
-            `}
-          </style>
-        </div>
+        /* deja tu bloque de resultados como está, o muévelo a un modal */
+        <div className="gs-results">{/* ...tu bloque actual... */}</div>
       )}
-
-      {/* Resultado de sacrificio */}
       {chapter.type === "sacrifice" && selectedOption && (
-        <div
-          style={{
-            margin: "2em auto",
-            padding: "2em",
-            background: "#3a1c1c",
-            borderRadius: "16px",
-            maxWidth: 400,
-            color: "#fff",
-            boxShadow: "0 0 16px #0008",
-            animation: "fadeInScale 1s"
-          }}
-        >
-          <h2 style={{ color: "#ff4c4c" }}>¡Sacrificio realizado!</h2>
-          <p>
-            <b>
-              {players.find(p => p.uid === selectedOption)?.username || "Jugador"}
-            </b>{" "}
-            ha sido sacrificado.
-          </p>
-          <p style={{ fontSize: "0.9em" }}>
-            Decisión tomada por:{" "}
-            <b>
-              {players.find(p => p.uid === auth.currentUser.uid)?.username ||
-                "Alguien"}
-            </b>
-          </p>
-          <style>
-            {`
-              @keyframes fadeInScale {
-                0% { opacity: 0; transform: scale(0.8);}
-                100% { opacity: 1; transform: scale(1);}
-              }
-            `}
-          </style>
-        </div>
+        <div className="gs-sacrifice">{/* ...tu bloque actual... */}</div>
       )}
-      {/* Botones de sacrificio */}
       {chapter.type === "sacrifice" && !selectedOption && (
-        <div>
-          <p>Selecciona a quién sacrificar:</p>
-          {players.map(player => (
-            <button
-              key={player.uid}
-              disabled={!optionsEnabled}
-              onClick={() => handleSacrifice(player.uid)}
-            >
-              {player.username}
-            </button>
-          ))}
-        </div>
+        <div className="gs-sacrificeOptions">{/* ...tu bloque actual... */}</div>
       )}
+  
+      {/* Pie: contador y logo */}
+      <div className="gs-footer">
+        <div className="gs-count">{(players?.length || 0)}/8</div>
+        <img
+          className="gs-logo"
+          src="https://raw.githubusercontent.com/SergioRP18/Logo-The-Last-Card/63b41668478c96474e4e0ef35e1d5abee18ea249/Logo_ToD.svg"
+          alt="Tales of Decay"
+        />
+      </div>
     </div>
   );
+  
 };
 
 export default GameScreen;
