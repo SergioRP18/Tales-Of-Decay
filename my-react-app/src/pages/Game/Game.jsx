@@ -67,6 +67,20 @@ const GameScreen = () => {
     fetchChapter();
   }, [roomId]);
 
+  // Si estamos en capítulo 3 o 6, y el jugador actual es el seleccionado (hoarder)
+// if (
+//   (chapter.id === "chapter_03" || chapter.id === "chapter_06") &&
+//   hoarder &&
+//   auth.currentUser.uid === hoarder.uid &&
+//   !voteResults
+// ) {
+//   return (
+//     <div style={{ textAlign: "center", marginTop: "20vh" }}>
+//       <h2>Has sido seleccionado...</h2>
+//       <p>Espera mientras los demás deciden tu destino.</p>
+//     </div>
+//   );
+// };
 
   // --- VOTACIÓN ---
   useEffect(() => {
@@ -97,9 +111,28 @@ const GameScreen = () => {
             ) {
               const db = getFirestore();
               const roomRef = doc(db, "rooms", roomId);
+
               // Filtra al jugador eliminado
               const updatedPlayers = players.filter(p => p.uid !== hoarder.uid);
               await updateDoc(roomRef, { players: updatedPlayers });
+
+              // 👇 Si el jugador actual es el eliminado, mándalo a GameOver
+              if (auth.currentUser.uid === hoarder.uid) {
+                navigate("/game-over", { state: { reason: "eliminated" } });
+                return;
+              }
+            }
+
+            if (
+              (chapter.id === "chapter_03" || chapter.id === "chapter_06") &&
+              winningOption === "save_player" &&
+              hoarder
+            ) {
+              // 👇 Si el jugador actual es el salvado, mándalo a GameOver pero con mensaje de salvado
+              if (auth.currentUser.uid === hoarder.uid) {
+                navigate("/game-over", { state: { reason: "saved" } });
+                return;
+              }
             }
 
             await clearVotes(roomId);
@@ -174,6 +207,43 @@ const GameScreen = () => {
   if (loading) return <div>Cargando capítulo...</div>;
   if (!chapter) return <div>No se encontró el capítulo.</div>;
 
+  // Pantalla especial para capítulos 3 y 6
+if ((chapter.id === "chapter_03" || chapter.id === "chapter_06") && hoarder && showPreChapter) {
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100vh",
+        textAlign: "center",
+        padding: "2em",
+      }}
+    >
+      <h2>Jugador seleccionado</h2>
+      <p style={{ fontSize: "1.5em", marginBottom: "2em", color: "#ffd700" }}>
+        {hoarder.username}
+      </p>
+      <button
+        onClick={() => setShowPreChapter(false)}
+        style={{
+          padding: "1em 2em",
+          backgroundColor: "#ffd700",
+          border: "none",
+          borderRadius: "12px",
+          fontSize: "1.2em",
+          cursor: "pointer",
+          boxShadow: "0 4px 8px rgba(0,0,0,0.3)",
+        }}
+      >
+        Seguir
+      </button>
+    </div>
+  );
+};
+
+
   if (showPreChapter) {
   const db = getFirestore();
   const roomRef = doc(db, "rooms", roomId);
@@ -223,7 +293,7 @@ const GameScreen = () => {
       {/*aparece el título del capítulo */}
       <h2>{chapter.title}</h2>
       <p style={{ fontSize: "1.2em", marginBottom: "2em" }}>
-        Leer la carta del capítulo correspondiente y asegurarse de que todos entiendan.
+        Antes de oprimir "Listo", leer la carta del capítulo correspondiente y asegurarse de que todos entiendan.
       </p>
       <button
         onClick={handleReady}

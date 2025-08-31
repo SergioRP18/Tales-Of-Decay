@@ -7,14 +7,14 @@ export async function submitVote(roomId, playerId, optionId) {
     optionId,
     timestamp: Date.now()
   });
-}
+;}
 
 export async function getVotes(roomId) {
   const db = getFirestore();
   const votesCol = collection(db, "rooms", roomId, "votes");
   const snap = await getDocs(votesCol);
   return snap.docs.map(doc => doc.data());
-}
+};
 
 export async function clearVotes(roomId) {
   const db = getFirestore();
@@ -23,4 +23,5 @@ export async function clearVotes(roomId) {
   for (const docSnap of snap.docs) {
     await deleteDoc(docSnap.ref);
   }
-}
+};
+
