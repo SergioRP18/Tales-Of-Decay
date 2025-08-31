@@ -1,0 +1,90 @@
+/* Evita padding del template de Vite si aplica */
+#root { margin: 0; padding: 0; max-width: none; }
+
+/* Layout general: ocupa pantalla, centra y sin sliders */
+.joinGeneral{
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: 1.2fr auto 1.4fr auto; /* [espacio] [logo] [form] [credits] */
+  justify-items: center;
+  align-items: center;
+  width: 100%;
+  padding: 16px;
+  color: #fff;
+  text-align: center;
+  overflow: hidden;
+}
+
+/* Logo un poco por debajo del centro */
+.joinLogo{
+  grid-row: 2;
+  width: clamp(220px, 70%, 360px);
+  height: auto;
+}
+
+/* Form centrado y estrecho */
+.joinForm{
+  grid-row: 3;
+  width: min(420px, 86%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(14px, 3vh, 24px);
+  margin: 0 auto;
+}
+
+/* Inputs subrayados (underline) */
+.joinInput{
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid rgba(255,255,255,.9);
+  color: #fff;
+  font-family: inherit;                    /* Amatic */
+  font-size: clamp(18px, 5.2vw, 24px);
+  padding: .35rem .25rem .45rem;
+  outline: none;
+  caret-color: #fff;
+}
+.joinInput::placeholder{ color: rgba(255,255,255,.85); opacity: 1; }
+.joinInput:focus{ border-bottom-color:#fff; box-shadow:0 2px 0 rgba(255,255,255,.25); }
+
+/* Botón tipo texto */
+.joinBtn{
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: clamp(22px, 6vw, 32px);
+  letter-spacing: .4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: transform .15s ease, opacity .2s ease;
+}
+.joinBtn:hover{ transform: translateY(-1px); opacity: .92; }
+
+/* Error (si aparece) */
+.joinError{
+  color: #ff6b6b;
+  font-size: 14px;
+  margin-top: 8px;
+}
+
+/* Créditos abajo, pequeños */
+.joinCredits{
+  grid-row: 4;
+  align-self: end;
+  width: 92%;
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.3;
+  opacity: .7;
+  color: #fff;
+}
+
+/* Tablet/desktop: mantiene composición y da aire */
+@media (min-width: 768px){
+  .joinGeneral{ grid-template-rows: 1.4fr auto 1.6fr auto; }
+  .joinLogo{ width: min(360px, 72%); }
+  .joinBtn{ font-size: 28px; }
+}

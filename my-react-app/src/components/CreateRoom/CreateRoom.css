@@ -1,0 +1,80 @@
+/* ===== CreateRoom.css (fix orden) ===== */
+
+/* quita padding del template de Vite */
+#root { margin: 0; padding: 0; max-width: none; }
+
+.generalCreateRoom{
+  min-height: 100dvh;
+  display: grid;
+  grid-template-rows: 1.2fr auto 1.8fr;   /* [espacio] [logo] [form] */
+  justify-items: center;
+  align-items: center;
+  width: 100%;
+  padding: 16px;
+  color: #fff;
+  text-align: center;
+  overflow: hidden;
+}
+
+/* LOGO arriba (ligeramente debajo del centro) */
+.logoRoom{
+  grid-row: 2;                               /* <- aquí va el logo */
+  width: clamp(220px, 70%, 360px);
+  height: auto;
+  margin: 0 auto;
+}
+
+/* El GRID ITEM real es el <form> */
+.generalCreateRoom form{
+  grid-row: 3;                               /* <- aquí va el form */
+  width: 100%;
+  display: flex;
+  justify-content: center;
+}
+
+/* Dentro del form, columna centrada */
+.createRoomForm{
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: clamp(16px, 3vh, 28px);
+  width: min(420px, 86%);
+  margin: 0 auto;
+}
+
+/* INPUT subrayado */
+.enterUser{
+  width: 100%;
+  background: transparent;
+  border: none;
+  border-bottom: 1.5px solid rgba(255,255,255,0.9);
+  color: #fff;
+  font-family: inherit;
+  font-size: clamp(20px, 5.4vw, 26px);
+  padding: .35rem .25rem .45rem;
+  outline: none;
+  caret-color: #fff;
+}
+.enterUser::placeholder{ color: rgba(255,255,255,.85); opacity: 1; }
+.enterUser:focus{ border-bottom-color:#fff; box-shadow:0 2px 0 rgba(255,255,255,.25); }
+
+/* Botón tipo texto */
+.crearSalaB{
+  background: transparent;
+  border: none;
+  color: inherit;
+  font-family: inherit;
+  font-size: clamp(24px, 6.6vw, 36px);
+  letter-spacing: .4px;
+  padding: 6px 12px;
+  cursor: pointer;
+  transition: transform .15s ease, opacity .2s ease;
+}
+.crearSalaB:hover{ transform: translateY(-1px); opacity: .92; }
+
+/* (Opcional) ajustes en tablet/desktop */
+@media (min-width: 768px){
+  .generalCreateRoom{ grid-template-rows: 1.4fr auto 1.6fr; }
+  .logoRoom{ width: min(360px, 72%); }
+  .crearSalaB{ font-size: 32px; }
+}

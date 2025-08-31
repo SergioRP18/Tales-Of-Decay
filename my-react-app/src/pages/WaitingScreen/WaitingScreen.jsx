@@ -10,6 +10,7 @@ import {
     query 
 } from "firebase/firestore";
 import { auth } from "../../services/firebaseConfig";
+import "./WaitingScreen.css"
 
 const COUNTDOWN_SECONDS = 10;
 
@@ -135,13 +136,9 @@ const WaitingScreen = ({ sessionId }) => {
 
     if (gameStarted) {
         return (
-            <div style={{ 
-                textAlign: "center", 
-                marginTop: "10vh",
-                color: "#fff",
-                minHeight: "100vh",
-                padding: "20px"
-            }}>
+
+            
+            <div className="loading"> 
                 <h2>¡El juego comenzará pronto!</h2>
                 <h3 style={{ fontSize: "2em", color: "#ff4444" }}>
                     Comenzando en {count}...
@@ -151,17 +148,9 @@ const WaitingScreen = ({ sessionId }) => {
     }
 
     return (
-        <div style={{ 
-            textAlign: "center", 
-            marginTop: "10vh",
-            color: "#fff",
-            minHeight: "100vh",
-            padding: "20px"
-        }}>
-            <h2 style={{ color: "#ff4444", marginBottom: "20px" }}>
-                Zona de Supervivencia
-            </h2>
-            <p>Código de sala: <strong style={{ color: "#ff4444" }}>{roomId}</strong></p>
+        <div  className="generalWaitingScreen">
+            <h2>¡Sala creada!</h2>
+            <p>Código de sala: <strong>{roomId}</strong></p>
             <p>Comparte este código con tus amigos para que se unan.</p>
             
             {/* Lista de jugadores */}
