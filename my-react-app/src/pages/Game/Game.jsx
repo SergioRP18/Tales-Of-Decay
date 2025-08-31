@@ -18,6 +18,7 @@ const GameScreen = () => {
   const [optionsEnabled, setOptionsEnabled] = useState(false);
   const [selectedOption, setSelectedOption] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showPreChapter, setShowPreChapter] = useState(true);
   const [voteResults, setVoteResults] = useState(null);
   const [players, setPlayers] = useState([]);
   const [hoarder, setHoarder] = useState(null); // Nuevo estado para el acaparador
@@ -172,6 +173,76 @@ const GameScreen = () => {
 
   if (loading) return <div>Cargando capítulo...</div>;
   if (!chapter) return <div>No se encontró el capítulo.</div>;
+
+  if (showPreChapter) {
+  const db = getFirestore();
+  const roomRef = doc(db, "rooms", roomId);
+
+  // Función al presionar "Listo"
+  const handleReady = async () => {
+    const user = auth.currentUser;
+    if (!user) return;
+
+    const roomSnap = await getDoc(roomRef);
+    if (!roomSnap.exists()) return;
+
+    const roomData = roomSnap.data();
+    const updatedPlayers = (roomData.players || []).map(p =>
+      p.uid === user.uid ? { ...p, readyForChapter: true } : p
+    );
+
+    await updateDoc(roomRef, { players: updatedPlayers });
+
+    // Verificar si todos están listos
+    const allReady = updatedPlayers.every(p => p.readyForChapter);
+    if (allReady) {
+      // Reseteamos readyForChapter para la siguiente ronda
+      const resetPlayers = updatedPlayers.map(p => ({
+        ...p,
+        readyForChapter: false,
+      }));
+      await updateDoc(roomRef, { players: resetPlayers });
+
+      // Avanzamos a la pantalla del capítulo
+      setShowPreChapter(false);
+    }
+  };
+
+  return (
+    <div
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: "center",
+        height: "100vh",
+        textAlign: "center",
+        padding: "2em",
+      }}
+    >
+      {/*aparece el título del capítulo */}
+      <h2>{chapter.title}</h2>
+      <p style={{ fontSize: "1.2em", marginBottom: "2em" }}>
+        Leer la carta del capítulo correspondiente y asegurarse de que todos entiendan.
+      </p>
+      <button
+        onClick={handleReady}
+        style={{
+          padding: "1em 2em",
+          backgroundColor: "#ffd700",
+          border: "none",
+          borderRadius: "12px",
+          fontSize: "1.2em",
+          cursor: "pointer",
+          boxShadow: "0 4px 8px rgba(0,0,0,0.3)",
+        }}
+      >
+        Listo
+      </button>
+    </div>
+  );
+};
+
 
   return (
     <div>
