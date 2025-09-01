@@ -1,11 +1,11 @@
 import React, { useEffect, useState } from "react";
 import TimerInput from "../../components/TimerInput/TimerInput";
 import { useNavigate, useParams } from "react-router-dom";
-import { getCurrentChapter, advanceToNextChapter } from "../../services/chapterService";
+import { getCurrentChapter } from "../../services/chapterService"; // ← quitamos advanceToNextChapter aquí
 import { submitVote, getVotes, clearVotes } from "../../services/voteService";
 import { submitSacrifice } from "../../services/sacrificeService";
 import { auth } from "../../services/firebaseConfig";
-import { getFirestore, doc, getDoc, updateDoc } from "firebase/firestore";
+import { getFirestore, doc, getDoc, updateDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import {
   savePlayerAnswer,
   savePlayerVote,
@@ -21,11 +21,11 @@ const GameScreen = () => {
   const [showPreChapter, setShowPreChapter] = useState(true);
   const [voteResults, setVoteResults] = useState(null);
   const [players, setPlayers] = useState([]);
-  const [hoarder, setHoarder] = useState(null); // Nuevo estado para el acaparador
+  const [hoarder, setHoarder] = useState(null); // jugador seleccionado cap 3/6
   const [startTime, setStartTime] = useState(null);
   const navigate = useNavigate();
 
-  // Carga el capítulo actual y jugadores al montar o cuando roomId cambia
+  // Carga capítulo y jugadores
   useEffect(() => {
     const fetchChapter = async () => {
       setLoading(true);
@@ -33,14 +33,12 @@ const GameScreen = () => {
         const data = await getCurrentChapter(roomId);
         setChapter(data);
 
-        // Cargar jugadores
         const db = getFirestore();
         const roomRef = doc(db, "rooms", roomId);
         const roomSnap = await getDoc(roomRef);
         const loadedPlayers = roomSnap.data().players || [];
         setPlayers(loadedPlayers);
 
-        // Lógica especial para capítulos 3 y 6
         if (data.id === "chapter_03" || data.id === "chapter_06") {
           let selectedPlayerId = roomSnap.data().selectedPlayerId;
 
@@ -50,7 +48,6 @@ const GameScreen = () => {
             await updateDoc(roomRef, { selectedPlayerId });
           }
 
-          // Buscar jugador seleccionado
           const selectedPlayer = loadedPlayers.find(p => p.uid === selectedPlayerId);
           setHoarder(selectedPlayer);
         } else {
@@ -67,34 +64,59 @@ const GameScreen = () => {
     fetchChapter();
   }, [roomId]);
 
-  // Si estamos en capítulo 3 o 6, y el jugador actual es el seleccionado (hoarder)
-// if (
-//   (chapter.id === "chapter_03" || chapter.id === "chapter_06") &&
-//   hoarder &&
-//   auth.currentUser.uid === hoarder.uid &&
-//   !voteResults
-// ) {
-//   return (
-//     <div style={{ textAlign: "center", marginTop: "20vh" }}>
-//       <h2>Has sido seleccionado...</h2>
-//       <p>Espera mientras los demás deciden tu destino.</p>
-//     </div>
-//   );
-// };
+  // Helper: publicar Feedback y navegar
+  async function showFeedback({
+    groupOptionId,
+    feedbackText,
+    announcements = [],
+    saved = [],
+    eliminated = [],
+    nextChapterId = null,
+    groupIsCorrect = false,
+    gameOver = false
+  }) {
+    const db = getFirestore();
+    const resRef = doc(db, "rooms", roomId, "meta", "lastResolution");
 
-  // --- VOTACIÓN ---
+    // survivors = jugadores actuales menos eliminados
+    const eliminatedIds = new Set(eliminated.map(p => p.uid));
+    const survivors = (players || [])
+      .filter(p => !eliminatedIds.has(p.uid))
+      .map(p => ({ uid: p.uid, name: p.username }));
+
+    await setDoc(resRef, {
+      chapterId: chapter.id,
+      groupOptionId,
+      groupIsCorrect,
+      feedback: feedbackText,
+      announcements,
+      saved,
+      eliminated,
+      survivors,
+      nextChapterId,
+      gameOver,
+      resolvedAt: serverTimestamp()
+    }, { merge: true });
+
+    // Marcar estado FEEDBACK para bloquear inputs
+    const roomRef = doc(db, "rooms", roomId);
+    await updateDoc(roomRef, { state: "FEEDBACK" });
+
+    navigate(`/feedback/${roomId}`);
+  }
+
+  // --- VOTACIÓN (TODOS los capítulos de tipo vote) ---
   useEffect(() => {
-    if (chapter?.type === "vote" && (chapter.id === "chapter_03" || chapter.id === "chapter_06")) {
+    if (chapter?.type === "vote") {
       const interval = setInterval(async () => {
         const votes = await getVotes(roomId);
         if (votes.length === players.length && players.length > 0) {
-          // Calcula resultado
+          // Conteo
           const counts = {};
           const votersByOption = {};
           votes.forEach(v => {
             counts[v.optionId] = (counts[v.optionId] || 0) + 1;
-            const playerName =
-              players.find(p => p.uid === v.playerId)?.username || v.playerId;
+            const playerName = players.find(p => p.uid === v.playerId)?.username || v.playerId;
             if (!votersByOption[v.optionId]) votersByOption[v.optionId] = [];
             votersByOption[v.optionId].push(playerName);
           });
@@ -103,48 +125,51 @@ const GameScreen = () => {
           setOptionsEnabled(false);
 
           setTimeout(async () => {
-            // --- Lógica especial para capítulo 3 y 6: eliminar o salvar ---
-            if (
-              (chapter.id === "chapter_03" || chapter.id === "chapter_06") &&
-              winningOption === "eliminate_player" &&
-              hoarder
-            ) {
-              const db = getFirestore();
-              const roomRef = doc(db, "rooms", roomId);
+            // Feedback desde la opción ganadora (si definiste feedback en voteOptions)
+            const winning = (chapter.voteOptions || []).find(o => o.id === winningOption);
+            const feedbackText = winning?.feedback
+              ? winning.feedback
+              : `El grupo decidió: ${winning ? winning.text : winningOption}.`;
 
-              // Filtra al jugador eliminado
-              const updatedPlayers = players.filter(p => p.uid !== hoarder.uid);
-              await updateDoc(roomRef, { players: updatedPlayers });
+            let announcements = [];
+            let eliminatedList = [];
+            let savedList = [];
 
-              // 👇 Si el jugador actual es el eliminado, mándalo a GameOver
-              if (auth.currentUser.uid === hoarder.uid) {
-                navigate("/game-over", { state: { reason: "eliminated" } });
-                return;
+            // Reglas especiales cap 3/6 con "acaparador"
+            if ((chapter.id === "chapter_03" || chapter.id === "chapter_06") && hoarder) {
+              const dbx = getFirestore();
+              const roomRef = doc(dbx, "rooms", roomId);
+
+              if (winningOption === "eliminate_player") {
+                const updatedPlayers = players.filter(p => p.uid !== hoarder.uid);
+                await updateDoc(roomRef, { players: updatedPlayers });
+                eliminatedList = [{ uid: hoarder.uid, name: hoarder.username }];
+                announcements.push(`${hoarder.username} ha muerto.`);
               }
-            }
-
-            if (
-              (chapter.id === "chapter_03" || chapter.id === "chapter_06") &&
-              winningOption === "save_player" &&
-              hoarder
-            ) {
-              // 👇 Si el jugador actual es el salvado, mándalo a GameOver pero con mensaje de salvado
-              if (auth.currentUser.uid === hoarder.uid) {
-                navigate("/game-over", { state: { reason: "saved" } });
-                return;
+              if (winningOption === "save_player") {
+                savedList = [{ uid: hoarder.uid, name: hoarder.username }];
+                announcements.push(`${hoarder.username} ha sido salvado.`);
               }
             }
 
             await clearVotes(roomId);
-            await advanceToNextChapter(roomId, chapter.nextChapter);
-            window.location.reload();
-          }, 3000); // 3 segundos para mostrar resultados
+
+            await showFeedback({
+              groupOptionId: winningOption,
+              feedbackText,
+              announcements,
+              saved: savedList,
+              eliminated: eliminatedList,
+              groupIsCorrect: true,
+              nextChapterId: chapter.nextChapter,
+              gameOver: false
+            });
+          }, 3000);
         }
       }, 1000);
       return () => clearInterval(interval);
     }
   }, [chapter, players.length, roomId, players, hoarder]);
-
 
   // --- SACRIFICIO ---
   const handleSacrifice = async (sacrificedPlayerId) => {
@@ -152,23 +177,40 @@ const GameScreen = () => {
     setSelectedOption(sacrificedPlayerId);
     await submitSacrifice(roomId, sacrificedPlayerId, auth.currentUser.uid);
     setTimeout(async () => {
-      await advanceToNextChapter(roomId, chapter.nextChapter);
-      window.location.reload();
+      const sacrificed = players.find(p => p.uid === sacrificedPlayerId);
+      await showFeedback({
+        groupOptionId: "sacrifice",
+        feedbackText: `${sacrificed?.username || "Alguien"} ha sido sacrificado.`,
+        announcements: [`${sacrificed?.username || sacrificedPlayerId} ha sido sacrificado.`],
+        eliminated: [{ uid: sacrificedPlayerId, name: sacrificed?.username }],
+        groupIsCorrect: true,
+        nextChapterId: chapter.nextChapter,
+        gameOver: false
+      });
     }, 2000);
   };
 
-  // Busca el username del jugador actual
+  // Busca username actual
   const currentPlayer = players.find(p => p.uid === auth.currentUser.uid);
   const username = currentPlayer ? currentPlayer.username : "Desconocido";
 
-  // --- RESPUESTA NORMAL ---
+  // --- RESPUESTA NORMAL (decision) ---
   const handleTimerEnd = async () => {
     setOptionsEnabled(false);
     const responseTime = startTime ? Date.now() - startTime : null;
 
     if (!selectedOption) {
       await markPlayerEliminated(roomId, auth.currentUser.uid, chapter.id);
-      navigate("/game-over", { state: { reason: "no-selection" } });
+      // AHORA: Feedback antes de perder
+      await showFeedback({
+        groupOptionId: "no-selection",
+        feedbackText: "No eliges a tiempo. La indecisión te condena.",
+        announcements: [`${username} ha muerto.`],
+        eliminated: [{ uid: auth.currentUser.uid, name: username }],
+        groupIsCorrect: false,
+        nextChapterId: null,
+        gameOver: true
+      });
     } else if (chapter.type === "decision") {
       const chosen = chapter.options?.find(opt => opt.id === selectedOption);
       await savePlayerAnswer(
@@ -178,13 +220,31 @@ const GameScreen = () => {
         chapter.id,
         selectedOption,
         !!chosen?.isCorrect,
-        responseTime // <-- Nuevo parámetro
+        responseTime
       );
+
       if (!chosen || !chosen.isCorrect) {
-        navigate("/game-over", { state: { reason: "wrong-answer" } });
+        // AHORA: Feedback antes de GameOver
+        await showFeedback({
+          groupOptionId: selectedOption,
+          feedbackText: chosen?.feedback || "La ruta elegida resulta fatal.",
+          announcements: [`${username} ha muerto.`],
+          eliminated: [{ uid: auth.currentUser.uid, name: username }],
+          groupIsCorrect: false,
+          nextChapterId: null,
+          gameOver: true
+        });
       } else {
-        await advanceToNextChapter(roomId, chosen.nextChapter);
-        window.location.reload();
+        // AHORA: Feedback antes de avanzar
+        await showFeedback({
+          groupOptionId: selectedOption,
+          feedbackText: chosen.feedback || "El grupo toma la ruta correcta y avanza.",
+          announcements: [],
+          eliminated: [],
+          groupIsCorrect: true,
+          nextChapterId: chosen.nextChapter,
+          gameOver: false
+        });
       }
     } else if (chapter.type === "vote") {
       await savePlayerVote(
@@ -193,10 +253,11 @@ const GameScreen = () => {
         username,
         chapter.id,
         selectedOption,
-        responseTime // <-- Nuevo parámetro
+        responseTime
       );
       await submitVote(roomId, auth.currentUser.uid, selectedOption);
       setOptionsEnabled(false);
+      // El avance real se hará cuando el intervalo de votos detecte que todos votaron (arriba)
     }
   };
 
@@ -207,129 +268,101 @@ const GameScreen = () => {
   if (loading) return <div>Cargando capítulo...</div>;
   if (!chapter) return <div>No se encontró el capítulo.</div>;
 
-  // Pantalla especial para capítulos 3 y 6
-if ((chapter.id === "chapter_03" || chapter.id === "chapter_06") && hoarder && showPreChapter) {
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100vh",
-        textAlign: "center",
-        padding: "2em",
-      }}
-    >
-      <h2>Jugador seleccionado</h2>
-      <p style={{ fontSize: "1.5em", marginBottom: "2em", color: "#ffd700" }}>
-        {hoarder.username}
-      </p>
-      <button
-        onClick={() => setShowPreChapter(false)}
+  // Pantalla especial cap 3/6
+  if ((chapter.id === "chapter_03" || chapter.id === "chapter_06") && hoarder && showPreChapter) {
+    return (
+      <div
         style={{
-          padding: "1em 2em",
-          backgroundColor: "#ffd700",
-          border: "none",
-          borderRadius: "12px",
-          fontSize: "1.2em",
-          cursor: "pointer",
-          boxShadow: "0 4px 8px rgba(0,0,0,0.3)",
+          display: "flex", flexDirection: "column", alignItems: "center",
+          justifyContent: "center", height: "100vh", textAlign: "center", padding: "2em",
         }}
       >
-        Seguir
-      </button>
-    </div>
-  );
-};
-
+        <h2>Jugador seleccionado</h2>
+        <p style={{ fontSize: "1.5em", marginBottom: "2em", color: "#ffd700" }}>
+          {hoarder.username}
+        </p>
+        <button
+          onClick={() => setShowPreChapter(false)}
+          style={{
+            padding: "1em 2em", backgroundColor: "#ffd700", border: "none",
+            borderRadius: "12px", fontSize: "1.2em", cursor: "pointer",
+            boxShadow: "0 4px 8px rgba(0,0,0,0.3)",
+          }}
+        >
+          Seguir
+        </button>
+      </div>
+    );
+  }
 
   if (showPreChapter) {
-  const db = getFirestore();
-  const roomRef = doc(db, "rooms", roomId);
+    const db = getFirestore();
+    const roomRef = doc(db, "rooms", roomId);
 
-  // Función al presionar "Listo"
-  const handleReady = async () => {
-    const user = auth.currentUser;
-    if (!user) return;
+    // Al presionar "Listo"
+    const handleReady = async () => {
+      const user = auth.currentUser;
+      if (!user) return;
 
-    const roomSnap = await getDoc(roomRef);
-    if (!roomSnap.exists()) return;
+      const roomSnap = await getDoc(roomRef);
+      if (!roomSnap.exists()) return;
 
-    const roomData = roomSnap.data();
-    const updatedPlayers = (roomData.players || []).map(p =>
-      p.uid === user.uid ? { ...p, readyForChapter: true } : p
-    );
+      const roomData = roomSnap.data();
+      const updatedPlayers = (roomData.players || []).map(p =>
+        p.uid === user.uid ? { ...p, readyForChapter: true } : p
+      );
 
-    await updateDoc(roomRef, { players: updatedPlayers });
+      await updateDoc(roomRef, { players: updatedPlayers });
 
-    // Verificar si todos están listos
-    const allReady = updatedPlayers.every(p => p.readyForChapter);
-    if (allReady) {
-      // Reseteamos readyForChapter para la siguiente ronda
-      const resetPlayers = updatedPlayers.map(p => ({
-        ...p,
-        readyForChapter: false,
-      }));
-      await updateDoc(roomRef, { players: resetPlayers });
+      // Si todos están listos, reset y mostrar capítulo
+      const allReady = updatedPlayers.every(p => p.readyForChapter);
+      if (allReady) {
+        const resetPlayers = updatedPlayers.map(p => ({ ...p, readyForChapter: false }));
+        await updateDoc(roomRef, { players: resetPlayers });
+        setShowPreChapter(false);
+      }
+    };
 
-      // Avanzamos a la pantalla del capítulo
-      setShowPreChapter(false);
-    }
-  };
-
-  return (
-    <div
-      style={{
-        display: "flex",
-        flexDirection: "column",
-        alignItems: "center",
-        justifyContent: "center",
-        height: "100vh",
-        textAlign: "center",
-        padding: "2em",
-      }}
-    >
-      {/*aparece el título del capítulo */}
-      <h2>{chapter.title}</h2>
-      <p style={{ fontSize: "1.2em", marginBottom: "2em" }}>
-        Antes de oprimir "Listo", leer la carta del capítulo correspondiente y asegurarse de que todos entiendan.
-      </p>
-      <button
-        onClick={handleReady}
+    return (
+      <div
         style={{
-          padding: "1em 2em",
-          backgroundColor: "#ffd700",
-          border: "none",
-          borderRadius: "12px",
-          fontSize: "1.2em",
-          cursor: "pointer",
-          boxShadow: "0 4px 8px rgba(0,0,0,0.3)",
+          display: "flex", flexDirection: "column", alignItems: "center",
+          justifyContent: "center", height: "100vh", textAlign: "center", padding: "2em",
         }}
       >
-        Listo
-      </button>
-    </div>
-  );
-};
-
+        <h2>{chapter.title}</h2>
+        <p style={{ fontSize: "1.2em", marginBottom: "2em" }}>
+          Antes de oprimir "Listo", leer la carta del capítulo correspondiente y asegurarse de que todos entiendan.
+        </p>
+        <button
+          onClick={handleReady}
+          style={{
+            padding: "1em 2em", backgroundColor: "#ffd700", border: "none",
+            borderRadius: "12px", fontSize: "1.2em", cursor: "pointer",
+            boxShadow: "0 4px 8px rgba(0,0,0,0.3)",
+          }}
+        >
+          Listo
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div>
       <h2>{chapter.title}</h2>
       <p>
-        {/* Personaliza la narrativa para capítulo 6 */}
         {chapter.id === "chapter_06" && hoarder
           ? `El acaparador es: ${hoarder.username}. ${chapter.narrative}`
           : chapter.narrative}
       </p>
       <TimerInput
         isAnswerPhase={true}
-        answerSeconds={45}
+        answerSeconds={10}
         onAnswerEnd={handleTimerEnd}
       />
 
-      {/* DECISION NORMAL */}
+      {/* DECISIÓN */}
       {chapter.type === "decision" && chapter.options && (
         <div>
           {chapter.options.map(opt => (
@@ -348,7 +381,7 @@ if ((chapter.id === "chapter_03" || chapter.id === "chapter_06") && hoarder && s
         </div>
       )}
 
-      {/* VOTACIÓN - Capítulo 6 personalizado */}
+      {/* VOTACIÓN cap 6 */}
       {chapter.type === "vote" && chapter.id === "chapter_06" && chapter.voteOptions && !voteResults && (
         <div>
           <p>¿Qué hacer con {hoarder ? hoarder.username : "el acaparador"}?</p>
@@ -362,14 +395,13 @@ if ((chapter.id === "chapter_03" || chapter.id === "chapter_06") && hoarder && s
                 color: selectedOption === opt.id ? "#222" : undefined,
               }}
             >
-              {/* Reemplaza {hoarder} en el texto de la opción */}
               {opt.text.replace("{hoarder}", hoarder ? hoarder.username : "el acaparador")}
             </button>
           ))}
         </div>
       )}
 
-      {/* VOTACIÓN - Otros capítulos */}
+      {/* VOTACIÓN otros capítulos */}
       {chapter.type === "vote" && chapter.id !== "chapter_06" && chapter.voteOptions && !voteResults && (
         <div>
           <p>Vota tu opción:</p>
@@ -389,7 +421,7 @@ if ((chapter.id === "chapter_03" || chapter.id === "chapter_06") && hoarder && s
         </div>
       )}
 
-      {/* Resultados de la votación */}
+      {/* Resultados de la votación (visual) */}
       {voteResults && (
         <div
           style={{
@@ -422,7 +454,6 @@ if ((chapter.id === "chapter_03" || chapter.id === "chapter_06") && hoarder && s
               }}
             >
               <span>
-                {/* Personaliza el texto de resultado para capítulo 6 */}
                 {chapter.id === "chapter_06"
                   ? opt.text.replace("{hoarder}", hoarder ? hoarder.username : "el acaparador")
                   : opt.text}
@@ -431,8 +462,7 @@ if ((chapter.id === "chapter_03" || chapter.id === "chapter_06") && hoarder && s
               <br />
               <span style={{ fontSize: "0.9em" }}>
                 {voteResults.votersByOption?.[opt.id]?.length > 0
-                  ? "Votaron: " +
-                    voteResults.votersByOption[opt.id].join(", ")
+                  ? "Votaron: " + voteResults.votersByOption[opt.id].join(", ")
                   : ""}
               </span>
               {voteResults.winningOption === opt.id && (
@@ -475,8 +505,7 @@ if ((chapter.id === "chapter_03" || chapter.id === "chapter_06") && hoarder && s
           <p style={{ fontSize: "0.9em" }}>
             Decisión tomada por:{" "}
             <b>
-              {players.find(p => p.uid === auth.currentUser.uid)?.username ||
-                "Alguien"}
+              {players.find(p => p.uid === auth.currentUser.uid)?.username || "Alguien"}
             </b>
           </p>
           <style>
@@ -489,6 +518,7 @@ if ((chapter.id === "chapter_03" || chapter.id === "chapter_06") && hoarder && s
           </style>
         </div>
       )}
+
       {/* Botones de sacrificio */}
       {chapter.type === "sacrifice" && !selectedOption && (
         <div>
