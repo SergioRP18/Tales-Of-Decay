@@ -13,7 +13,7 @@ import {
   updateDoc,
   setDoc,
   serverTimestamp,
-  writeBatch, // 👈 nuevo
+  writeBatch,
 } from "firebase/firestore";
 import {
   savePlayerAnswer,
@@ -89,7 +89,6 @@ const GameScreen = () => {
     }
   }, [roomState, navigate, roomId]);
 
-  // ======= FEEDBACK ATÓMICO (soluciona cargando infinito) =======
   async function showFeedback({
     groupOptionId,
     feedbackText,
@@ -110,7 +109,6 @@ const GameScreen = () => {
 
     const batch = writeBatch(db);
 
-    // Guardamos suficiente metadata para Feedback (desacoplado del blueprint)
     batch.set(
       resRef,
       {
@@ -118,6 +116,7 @@ const GameScreen = () => {
         chapterType: chapter.type || null,
         voteOptionsSnapshot: chapter.type === "vote" ? chapter.voteOptions || null : null,
         cap12Roles: chapter.cap12?.roles || null,
+        cap15Roles: chapter.cap15?.roles || null,
 
         groupOptionId,
         groupIsCorrect,
@@ -133,15 +132,13 @@ const GameScreen = () => {
       { merge: true }
     );
 
-    // Cambiamos a FEEDBACK en el mismo commit
     batch.update(roomRef, { state: "FEEDBACK" });
 
     await batch.commit();
     navigate(`/feedback/${roomId}`);
   }
-  // ===============================================================
 
-  // Poll de votos (cap12 cierra con voto del Salvador)
+  // =================== POLL DE VOTOS ===================
   useEffect(() => {
     if (!chapter || chapter?.type !== "vote") return;
     const handler = getChapterHandler(chapter);
@@ -149,14 +146,23 @@ const GameScreen = () => {
     const interval = setInterval(async () => {
       const votes = await getVotes(roomId);
 
-      const saviorId = chapter.cap12?.roles?.saviorId;
       let ready = false;
       let relevantVotes = votes;
 
-      if (chapter.id === "chapter_12" && saviorId) {
+      // Cap 12: cierra cuando vota el Salvador
+      if (chapter.id === "chapter_12" && chapter.cap12?.roles?.saviorId) {
+        const saviorId = chapter.cap12.roles.saviorId;
         relevantVotes = votes.filter((v) => v.playerId === saviorId);
         ready = relevantVotes.length >= 1;
-      } else {
+      }
+      // Cap 15: solo vota Hoguera; cierra cuando TODOS los de Hoguera votan
+      else if (chapter.id === "chapter_15" && chapter.cap15?.roles?.bonfireIds) {
+        const bonfireIds = chapter.cap15.roles.bonfireIds || [];
+        relevantVotes = votes.filter((v) => bonfireIds.includes(v.playerId));
+        ready = bonfireIds.length > 0 && relevantVotes.length === bonfireIds.length;
+      }
+      // Resto: espera a todos
+      else {
         ready = votes.length === players.length && players.length > 0;
       }
 
@@ -175,28 +181,29 @@ const GameScreen = () => {
         setOptionsEnabled(false);
 
         setTimeout(async () => {
-          const { announcements, eliminated, saved, feedbackText } =
+          const res =
             (await handler.onVoteResolved?.({
               roomId,
               chapter,
               players,
               hoarder,
               winningOption,
-            })) || { announcements: [], eliminated: [], saved: [], feedbackText: null };
+            })) || { announcements: [], eliminated: [], saved: [], feedbackText: null, nextChapter: null };
 
           await clearVotes(roomId);
 
           await showFeedback({
             groupOptionId: winningOption,
             feedbackText:
-              feedbackText ||
+              res.feedbackText ||
               chapter.voteOptions?.find((o) => o.id === winningOption)?.feedback ||
               `El grupo decidió: ${winningOption}.`,
-            announcements,
-            saved,
-            eliminated,
+            announcements: res.announcements || [],
+            saved: res.saved || [],
+            eliminated: res.eliminated || [],
             groupIsCorrect: true,
-            nextChapterId: chapter.nextChapter,
+            // ⚠️ tomar nextChapter dinámico del handler (necesario en cap15)
+            nextChapterId: res.nextChapter || chapter.nextChapter || null,
             gameOver: false,
           });
         }, 3000);
@@ -204,6 +211,7 @@ const GameScreen = () => {
     }, 1000);
     return () => clearInterval(interval);
   }, [chapter, players, hoarder, roomId]);
+  // =====================================================
 
   const handleSacrifice = async (sacrificedPlayerId) => {
     setOptionsEnabled(false);
@@ -232,12 +240,17 @@ const GameScreen = () => {
     const responseTime = startTime ? Date.now() - startTime : null;
 
     if (!selectedOption) {
-      if (
+      // Espectadores no penalizados
+      const isCap12Spectator =
         chapter?.id === "chapter_12" &&
-        auth.currentUser?.uid !== chapter.cap12?.roles?.saviorId
-      ) {
-        return; // espectador/salvado no se penaliza
-      }
+        auth.currentUser?.uid !== chapter.cap12?.roles?.saviorId;
+
+      const isCap15Spectator =
+        chapter?.id === "chapter_15" &&
+        !(chapter.cap15?.roles?.bonfireIds || []).includes(auth.currentUser?.uid);
+
+      if (isCap12Spectator || isCap15Spectator) return;
+
       await markPlayerEliminated(roomId, auth.currentUser.uid, chapter.id);
       await showFeedback({
         groupOptionId: "no-selection",
@@ -300,9 +313,18 @@ const GameScreen = () => {
     }
 
     if (chapter.type === "vote") {
+      // Cap 12: solo el Salvador vota
       if (chapter.id === "chapter_12" && auth.currentUser?.uid !== chapter.cap12?.roles?.saviorId) {
         return;
       }
+      // Cap 15: solo Hoguera vota
+      if (
+        chapter.id === "chapter_15" &&
+        !(chapter.cap15?.roles?.bonfireIds || []).includes(auth.currentUser?.uid)
+      ) {
+        return;
+      }
+
       await savePlayerVote(
         roomId,
         auth.currentUser.uid,
@@ -329,6 +351,14 @@ const GameScreen = () => {
 
   const handler = getChapterHandler(chapter);
   const apply = (txt) => handler.applyTokens?.(txt, { hoarder }) ?? txt;
+
+  // Helpers de pertenencia a grupos del cap 15
+  const isBonfire =
+    chapter?.id === "chapter_15" &&
+    (chapter.cap15?.roles?.bonfireIds || []).includes(auth.currentUser?.uid);
+  const isCabin =
+    chapter?.id === "chapter_15" &&
+    (chapter.cap15?.roles?.cabinIds || []).includes(auth.currentUser?.uid);
 
   return (
     <div className="game">
@@ -364,6 +394,8 @@ const GameScreen = () => {
                     "el Salvador";
                   return `Decisión del Salvador (${savName})`;
                 })()
+              : chapter.id === "chapter_15"
+              ? "Decisión del grupo de la Hoguera"
               : hoarder
               ? `¿Qué hacer con ${hoarder.username}?`
               : "Vota tu opción:"}
@@ -375,7 +407,8 @@ const GameScreen = () => {
               disabled={
                 !optionsEnabled ||
                 (chapter.id === "chapter_12" &&
-                  auth.currentUser?.uid !== chapter.cap12?.roles?.saviorId)
+                  auth.currentUser?.uid !== chapter.cap12?.roles?.saviorId) ||
+                (chapter.id === "chapter_15" && !isBonfire)
               }
               onClick={() => setSelectedOption(opt.id)}
               className={`btn-option ${selectedOption === opt.id ? "is-selected" : ""}`}
@@ -384,10 +417,9 @@ const GameScreen = () => {
             </button>
           ))}
 
-          {chapter.id === "chapter_12" &&
-            auth.currentUser?.uid !== chapter.cap12?.roles?.saviorId && (
-              <p className="vote__waiting">Esperando la decisión del Salvador…</p>
-            )}
+          {chapter.id === "chapter_15" && isCabin && (
+            <p className="vote__waiting">Estás en Cabaña: esperando la decisión de la Hoguera…</p>
+          )}
         </div>
       )}
 

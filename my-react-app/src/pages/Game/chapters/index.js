@@ -1,15 +1,16 @@
-// src/pages/Game/chapters/index.js
 import * as common from "./common.js";
 import * as ch03 from "./ch03.js";
 import * as ch06 from "./ch06.js";
 import * as ch09 from "./ch09.js";
 import * as ch12 from "./ch12.js";
+import * as ch15 from "./ch15.js";
 
 const map = {
   chapter_03: ch03,
   chapter_06: ch06,
   chapter_09: ch09,
   chapter_12: ch12,
+  chapter_15: ch15,
 };
 
 export function getChapterHandler(chapter) {
