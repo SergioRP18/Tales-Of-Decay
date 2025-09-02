@@ -1,47 +1,80 @@
-import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
-import { httpsCallable } from "firebase/functions";
-import { functions, db } from "./firebaseConfig";
+// src/services/feedbackService.js
+import {
+  getFirestore,
+  doc,
+  getDoc,
+  setDoc,
+  updateDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 
 /**
- * Aplica la resolución:
- * - En producción intenta usar la Cloud Function `applyResolution`.
- * - En desarrollo (Vite DEV) o si falla, usa fallback local para evitar CORS.
- * Devuelve { next: "LOBBY" | string | null }
+ * Lee la última resolución del capítulo.
  */
-export async function applyResolution(roomId) {
-  const isDev = import.meta.env.DEV;
+export async function readLastResolution(roomId) {
+  const db = getFirestore();
+  const ref = doc(db, "rooms", roomId, "meta", "lastResolution");
+  const snap = await getDoc(ref);
+  return snap.exists() ? snap.data() : null;
+}
 
-  if (!isDev) {
-    try {
-      const apply = httpsCallable(functions, "applyResolution");
-      const res = await apply({ roomId });
-      return res.data; // { next: ... }
-    } catch (_) {
-      // si falla (CORS u otro), caemos al fallback local
-    }
-  }
+/**
+ * Avanza de forma segura al siguiente capítulo o vuelve al lobby si no hay siguiente.
+ */
+export async function goToNextChapter(roomId, nextChapterId, fallbackChapterId) {
+  const db = getFirestore();
+  const nextId = nextChapterId || fallbackChapterId || null;
 
-  // ===== Fallback local (dev) =====
-  const resRef = doc(db, "rooms", roomId, "meta", "lastResolution");
-  const snap = await getDoc(resRef);
-  if (!snap.exists()) throw new Error("No existe rooms/{roomId}/meta/lastResolution");
-
-  const data = snap.data();
-  const roomRef = doc(db, "rooms", roomId);
-
-  if (data.gameOver) {
-    await updateDoc(roomRef, { state: "LOBBY" });
-    return { next: "LOBBY" };
-  }
-
-  if (data.groupIsCorrect && data.nextChapterId) {
-    await updateDoc(roomRef, {
-      currentChapter: data.nextChapterId,
-      state: "OPEN",
+  if (nextId) {
+    await updateDoc(doc(db, "rooms", roomId), {
+      currentChapter: nextId,
+      state: "PRECHAPTER",
     });
-    await deleteDoc(resRef);
-    return { next: data.nextChapterId };
+  } else {
+    await setDoc(
+      doc(db, "rooms", roomId, "meta", "lastResolution"),
+      { gameOver: true, endedAt: serverTimestamp() },
+      { merge: true }
+    );
+    await updateDoc(doc(db, "rooms", roomId), { state: "LOBBY" });
+  }
+}
+
+/**
+ * 🔹 Export que tu botón espera.
+ * Decide a dónde navegar y hace los updates mínimos en Firestore.
+ * Devuelve un string que tu `FeedbackScreen` usa en `onNavigate`:
+ *  - "GAME_OVER_SELF"  -> navega a /game-over
+ *  - "LOBBY"           -> navega a /lobby
+ *  - "NEXT"            -> navega a /game/:roomId (siguiente capítulo)
+ */
+export async function applyResolution(roomId, { eliminatedSelf = false } = {}) {
+  const db = getFirestore();
+  const roomRef = doc(db, "rooms", roomId);
+  const res = await readLastResolution(roomId);
+
+  if (!res) return null;
+
+  // Fin de juego
+  if (res.gameOver) {
+    if (eliminatedSelf) {
+      return "GAME_OVER_SELF";
+    }
+    await updateDoc(roomRef, { state: "LOBBY" });
+    return "LOBBY";
   }
 
-  return { next: null };
+  // Siguiente capítulo
+  const nextId = res.nextChapterId || null;
+  if (nextId) {
+    await updateDoc(roomRef, {
+      currentChapter: nextId,
+      state: "PRECHAPTER",
+    });
+    return "NEXT";
+  }
+
+  // Fallback defensivo: sin nextChapter -> lobby
+  await updateDoc(roomRef, { state: "LOBBY" });
+  return "LOBBY";
 }

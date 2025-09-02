@@ -1,118 +1,122 @@
+// src/pages/PreChapter/PreChapter.jsx
 import React, { useEffect, useState } from "react";
-import { useNavigate, useParams } from "react-router-dom";
-import { getFirestore, doc, getDoc, updateDoc, onSnapshot } from "firebase/firestore";
+import { useParams, useNavigate } from "react-router-dom";
+import { getFirestore, doc, getDoc, updateDoc, setDoc, serverTimestamp } from "firebase/firestore";
 import { auth } from "../../services/firebaseConfig";
 import { getCurrentChapter } from "../../services/chapterService";
-import { getChapterHandler } from "../Game/chapters/index.js";
-
-// 👇 importa estilos de la página
+import { setReady, getReadies, clearReadies } from "../../services/readyService";
+import { mirrorBotsReady } from "../../services/debugService";
+import { seedBots, removeBots } from "../../services/roomService";
 import "./prechapter.css";
 
-const PreChapterScreen = () => {
+export default function PreChapter() {
   const { roomId } = useParams();
-  const navigate = useNavigate();
-  const db = getFirestore();
-
-  const [loading, setLoading] = useState(true);
-  const [chapter, setChapter] = useState(null);
   const [players, setPlayers] = useState([]);
-  const [hoarder, setHoarder] = useState(null);
-  const [readyCount, setReadyCount] = useState({ ready: 0, total: 0 });
+  const [readyCount, setReadyCount] = useState(0);
+  const [chapter, setChapter] = useState(null);
 
+  const [dbg, setDbg] = useState({
+    show: import.meta.env.DEV,
+    mirror: localStorage.getItem("mirrorBots") === "1",
+  });
+  const toggleMirror = () => {
+    const v = !dbg.mirror;
+    localStorage.setItem("mirrorBots", v ? "1" : "0");
+    setDbg((s) => ({ ...s, mirror: v }));
+  };
+
+  const db = getFirestore();
+  const navigate = useNavigate();
+
+  // Carga players + capítulo actual
   useEffect(() => {
-    let alive = true;
     (async () => {
-      setLoading(true);
-      try {
-        const data = await getCurrentChapter(roomId);
-        if (!alive) return;
-
-        const roomRef = doc(db, "rooms", roomId);
-        const roomSnap = await getDoc(roomRef);
-        const loadedPlayers = roomSnap.data()?.players || [];
-
-        const handler = getChapterHandler(data);
-        const ctx =
-          (await handler.prepare?.({ roomId, players: loadedPlayers, chapter: data })) || {};
-
-        if (!alive) return;
-        setChapter(data);
-        setPlayers(loadedPlayers);
-        setHoarder(ctx.hoarder ?? null);
-
-        if (roomSnap.data()?.state !== "PRE") {
-          await updateDoc(roomRef, { state: "PRE" });
-        }
-      } finally {
-        if (alive) setLoading(false);
-      }
+      const roomRef = doc(db, "rooms", roomId);
+      const snap = await getDoc(roomRef);
+      const data = snap.data() || {};
+      setPlayers(Array.isArray(data.players) ? data.players : []);
+      const ch = await getCurrentChapter(roomId);
+      setChapter(ch);
     })();
-    return () => {
-      alive = false;
-    };
   }, [db, roomId]);
 
+  // Poll de “Listo” SOLO del capítulo actual y SOLO de jugadores actuales
   useEffect(() => {
-    const roomRef = doc(db, "rooms", roomId);
-    const unsub = onSnapshot(roomRef, (snap) => {
-      const data = snap.data() || {};
-      const total = (data.players || []).length;
-      const ready = (data.players || []).filter((p) => p.readyForChapter).length;
-      setReadyCount({ ready, total });
+    if (!roomId || !chapter?.id) return;
+    let cancel = false;
 
-      if (data.state === "PLAY") {
+    const tick = async () => {
+      const list = await getReadies(roomId, chapter.id);
+      // Filtra a solo jugadores actuales (por si alguien fue eliminado)
+      const present = new Set(players.map((p) => p.uid));
+      const count = list.filter((r) => r.ready && present.has(r.playerId)).length;
+      if (!cancel) setReadyCount(count);
+
+      // Avanza automáticamente cuando estén todos los presentes
+      if (players.length > 0 && count === players.length) {
+        await updateDoc(doc(db, "rooms", roomId), { state: "PLAY" });
         navigate(`/game/${roomId}`);
       }
-    });
-    return () => unsub();
-  }, [db, roomId, navigate]);
+    };
 
-  if (loading || !chapter) return <div className="page-loading">Cargando capítulo…</div>;
+    const i = setInterval(tick, 800);
+    tick();
+    return () => { cancel = true; clearInterval(i); };
+  }, [db, roomId, players, chapter, navigate]);
 
-  const handler = getChapterHandler(chapter);
-  const pre = handler.getPreContent?.({ chapter, hoarder }) || {
-    title: chapter.title,
-    message:
-      'Antes de oprimir "Listo", leer la carta del capítulo correspondiente y asegurarse de que todos entiendan.'
-  };
+  async function onReadyClick() {
+    if (!chapter?.id) return;
+    await setReady(roomId, chapter.id, auth.currentUser.uid, true);
+    if (dbg.mirror) await mirrorBotsReady(roomId, players, chapter.id);
+  }
 
-  const handleReady = async () => {
-    const user = auth.currentUser;
-    if (!user) return;
+  async function skipChapterDbg() {
+    if (!chapter?.id) return;
+    await clearReadies(roomId, chapter.id);
 
-    const roomRef = doc(db, "rooms", roomId);
-    const roomSnap = await getDoc(roomRef);
-    if (!roomSnap.exists()) return;
-
-    const data = roomSnap.data();
-    const updatedPlayers = (data.players || []).map((p) =>
-      p.uid === user.uid ? { ...p, readyForChapter: true } : p
+    const survivors = players.map((p) => ({ uid: p.uid, name: p.username }));
+    await setDoc(
+      doc(db, "rooms", roomId, "meta", "lastResolution"),
+      {
+        chapterId: chapter.id,
+        groupOptionId: "debug-skip",
+        groupIsCorrect: true,
+        feedback: "DEBUG: saltar capítulo",
+        announcements: [],
+        saved: [],
+        eliminated: [],
+        survivors,
+        nextChapterId: chapter.nextChapter || null,
+        gameOver: false,
+        resolvedAt: serverTimestamp(),
+      },
+      { merge: true }
     );
-    await updateDoc(roomRef, { players: updatedPlayers });
-
-    const allReady = updatedPlayers.every((p) => p.readyForChapter);
-    if (allReady) {
-      const resetPlayers = updatedPlayers.map((p) => ({ ...p, readyForChapter: false }));
-      await updateDoc(roomRef, { players: resetPlayers, state: "PLAY" });
-      navigate(`/game/${roomId}`);
-    }
-  };
+    await updateDoc(doc(db, "rooms", roomId), { state: "FEEDBACK" });
+    navigate(`/feedback/${roomId}`);
+  }
 
   return (
-    <div className="pre">
-      <h2 className="pre__title">{pre.title}</h2>
-      {pre.highlight && <p className="pre__highlight">{pre.highlight}</p>}
-      <p className="pre__message">{pre.message}</p>
+    <div className="prechapter">
+      <h2>{chapter?.title || "Precapítulo"}</h2>
+      <p>Antes de oprimir “LISTO”, lean la carta del capítulo correspondiente y asegúrense de que todos entiendan.</p>
+      <p>Listos: {readyCount}/{players.length}</p>
 
-      <div className="pre__ready">
-        Listos: {readyCount.ready}/{readyCount.total}
-      </div>
+      <button className="btn-option" onClick={onReadyClick}>LISTO</button>
 
-      <button onClick={handleReady} className="btn btn--gold">
-        Listo
-      </button>
+      {dbg.show && (
+        <div className="debug-bar" style={{ marginTop: 16, opacity: 0.85 }}>
+          <button className="btn-option" onClick={() => seedBots(roomId, 7)}>+7 bots (DEV)</button>
+          <button className="btn-option" onClick={toggleMirror}>
+            {dbg.mirror ? "Mirror bots: ON" : "Mirror bots: OFF"}
+          </button>
+          <button className="btn-option" onClick={skipChapterDbg}>Siguiente capítulo (DBG)</button>
+          <button className="btn-option btn-danger" onClick={() => removeBots(roomId)}>Quitar bots</button>
+          <button className="btn-option btn-danger" onClick={() => chapter?.id && clearReadies(roomId, chapter.id)}>
+            Limpiar “Listo” (DBG)
+          </button>
+        </div>
+      )}
     </div>
   );
-};
-
-export default PreChapterScreen;
+}

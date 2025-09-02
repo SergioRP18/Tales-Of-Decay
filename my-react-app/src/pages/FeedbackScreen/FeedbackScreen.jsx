@@ -1,3 +1,4 @@
+// src/pages/Feedback/FeedbackScreen.jsx
 import { useEffect, useState } from "react";
 import { doc, onSnapshot } from "firebase/firestore";
 import { useNavigate, useParams } from "react-router-dom";
@@ -25,8 +26,8 @@ function FeedbackScreen() {
     if (next === "GAME_OVER_SELF") {
       return navigate("/game-over", { state: { reason: "eliminated" } });
     }
-    if (next === "LOBBY") return navigate("/lobby");           // ✔ tu ruta es /lobby
-    if (typeof next === "string") return navigate(`/game/${roomId}`); // ✔ no /chapter
+    if (next === "LOBBY") return navigate("/lobby");
+    if (typeof next === "string") return navigate(`/game/${roomId}`);
   };
 
   if (!res) {
