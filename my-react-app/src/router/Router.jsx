@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import { GameScreen, GameOverScreen, JoinRoomScreen, LoadingScreen, LobbyScreen, LoginScreen, ResultsScreen, WaitingScreen, Home, FeedbackScreen, PreChapter } from "../pages/index.jsx";
+import { GameScreen, GameOverScreen, JoinRoomScreen, LoadingScreen, LobbyScreen, LoginScreen, ResultsScreen, WaitingScreen, Home, FeedbackScreen, PreChapter, Survivor } from "../pages/index.jsx";
 
 const Router = () => {
     return (
@@ -17,6 +17,7 @@ const Router = () => {
             <Route path="/join-room/:roomId" element={<JoinRoomScreen />} />
             <Route path="/waiting/:roomId" element={<WaitingScreen />} />
             <Route path="/results" element={<ResultsScreen />} />
+            <Route path="/supervivientes/:roomId" element={<Survivor />} />
             <Route path="/game-over" element={<GameOverScreen />} />
         </Routes>
         </BrowserRouter>

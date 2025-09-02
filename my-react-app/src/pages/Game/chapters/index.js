@@ -6,6 +6,7 @@ import * as ch09 from "./ch09.js";
 import * as ch12 from "./ch12.js";
 import * as ch15 from "./ch15.js";
 import * as ch18 from "./ch18.js";
+import * as ch20 from "./ch20.js";
 
 const map = {
   chapter_03: ch03,
@@ -14,6 +15,7 @@ const map = {
   chapter_12: ch12,
   chapter_15: ch15,
   chapter_18: ch18,
+  chapter_20: ch20,
 };
 
 export function getChapterHandler(chapter) {
@@ -23,6 +25,6 @@ export function getChapterHandler(chapter) {
     prepare: h?.prepare || common.prepareDefault,
     getPreContent: h?.getPreContent || common.getPreContentDefault,
     onVoteResolved: h?.onVoteResolved || common.onVoteResolvedDefault,
-    autoResolve: h?.autoResolve, // usado por capítulos type:"auto" (cap 18)
+    autoResolve: h?.autoResolve, // cap 18
   };
 }

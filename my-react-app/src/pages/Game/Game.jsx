@@ -132,8 +132,16 @@ const GameScreen = () => {
       { merge: true }
     );
 
-    batch.update(roomRef, { state: "FEEDBACK" });
+    // Capítulo 20: en vez de Feedback, vamos a Supervivientes
+    if (chapter?.id === "chapter_20") {
+      batch.update(roomRef, { state: "SURVIVORS" });
+      await batch.commit();
+      navigate(`/supervivientes/${roomId}`);
+      return;
+    }
 
+    // Resto de capítulos → Feedback
+    batch.update(roomRef, { state: "FEEDBACK" });
     await batch.commit();
     navigate(`/feedback/${roomId}`);
   }
@@ -326,6 +334,20 @@ const GameScreen = () => {
         );
       }
 
+      // En cap 20, ambas opciones son correctas y vamos a Supervivientes
+      if (chapter?.id === "chapter_20") {
+        await showFeedback({
+          groupOptionId: selectedOption,
+          feedbackText: chosen?.feedback || "El grupo alcanza su destino.",
+          announcements: [],
+          eliminated: [],
+          groupIsCorrect: true,
+          nextChapterId: null,
+          gameOver: true, // final de juego
+        });
+        return;
+      }
+
       if (!chosen || !chosen.isCorrect) {
         await showFeedback({
           groupOptionId: selectedOption,
@@ -397,7 +419,41 @@ const GameScreen = () => {
     chapter?.id === "chapter_15" &&
     (chapter.cap15?.roles?.cabinIds || []).includes(auth.currentUser?.uid);
 
-  // Si el capítulo es "auto", no mostramos UI (ya se resolvió y navega solo)
+  // ===== helper de debug: resolver cap 15 sin votar (sirve si sos espectador) =====
+  const resolveCap15 = async (opt /* "betray" | "silence" */) => {
+    const res =
+      (await handler.onVoteResolved?.({
+        roomId,
+        chapter,
+        players,
+        hoarder,
+        winningOption: opt,
+      })) || {
+        announcements: [],
+        eliminated: [],
+        saved: [],
+        feedbackText: null,
+        nextChapter: null,
+      };
+
+    await clearVotes(roomId);
+
+    await showFeedback({
+      groupOptionId: opt,
+      feedbackText:
+        res.feedbackText ||
+        chapter.voteOptions?.find((o) => o.id === opt)?.feedback ||
+        `El grupo decidió: ${opt}.`,
+      announcements: res.announcements || [],
+      saved: res.saved || [],
+      eliminated: res.eliminated || [],
+      groupIsCorrect: true,
+      nextChapterId: res.nextChapter || chapter.nextChapter || null,
+      gameOver: false,
+    });
+  };
+
+  // Si el capítulo es "auto", no mostramos UI (cap 18)
   if (chapter?.type === "auto") {
     return <div className="page-loading">Resolviendo…</div>;
   }
@@ -529,9 +585,15 @@ const GameScreen = () => {
           <button className="btn-option" onClick={toggleMirror}>
             {dbg.mirror ? "Mirror bots: ON" : "Mirror bots: OFF"}
           </button>
+
+          {/* DBG: por defecto, si estás en cap 15, resolver "Delatar" */}
           <button
             className="btn-option"
             onClick={async () => {
+              if (chapter?.id === "chapter_15") {
+                await resolveCap15("betray");
+                return;
+              }
               await clearVotes(roomId);
               await showFeedback({
                 groupOptionId: "debug-skip",
@@ -548,6 +610,7 @@ const GameScreen = () => {
             Siguiente capítulo (DBG)
           </button>
 
+          {/* Cap 12: forzar voto del Salvador */}
           {chapter?.id === "chapter_12" &&
             auth.currentUser?.uid !== chapter.cap12?.roles?.saviorId && (
               <>
@@ -565,6 +628,26 @@ const GameScreen = () => {
                 </button>
               </>
             )}
+
+          {/* Cap 15: resolver sin ser de Hoguera (aparece para TODOS) */}
+          {chapter?.id === "chapter_15" && (
+            <>
+              <button
+                className="btn-option"
+                onClick={() => resolveCap15("betray")}
+                title="Fuerza la decisión de la Hoguera: Delatar (mata Cabaña, pasa Hoguera)"
+              >
+                Resolver cap 15: Delatar (DBG)
+              </button>
+              <button
+                className="btn-option"
+                onClick={() => resolveCap15("silence")}
+                title="Fuerza la decisión de la Hoguera: Mantener el silencio (mata Hoguera, pasa Cabaña)"
+              >
+                Resolver cap 15: Silencio (DBG)
+              </button>
+            </>
+          )}
 
           <button className="btn-option btn-danger" onClick={() => removeBots(roomId)}>
             Quitar bots
