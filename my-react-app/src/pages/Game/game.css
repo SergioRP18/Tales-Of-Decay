@@ -1,0 +1,130 @@
+/* Pageload */
+.page-loading {
+    padding: 2rem;
+    text-align: center;
+  }
+  
+  /* Layout general */
+  .game {
+    padding: 1rem;
+  }
+  
+  .game__title {
+    margin: 0 0 0.25rem;
+  }
+  
+  .game__narrative {
+    margin: 0 0 1rem;
+    line-height: 1.5;
+  }
+  
+  /* Opciones */
+  .options {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 0.75rem;
+  }
+  
+  .btn-option {
+    padding: 0.75rem 1rem;
+    border-radius: 12px;
+    border: none;
+    background: #2a2a2a;
+    color: #fff;
+    cursor: pointer;
+    transition: transform 0.08s ease, box-shadow 0.2s ease, background 0.2s ease, color 0.2s ease;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.25);
+  }
+  
+  .btn-option:hover:enabled {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+  }
+  
+  .btn-option:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  
+  .btn-option.is-selected {
+    background: #ffd700;
+    color: #222;
+  }
+  
+  /* Cards básicas */
+  .card {
+    margin: 2em auto;
+    padding: 2em;
+    border-radius: 16px;
+    max-width: 420px;
+    box-shadow: 0 0 16px rgba(0,0,0,0.5);
+  }
+  
+  .card--dark {
+    background: #222;
+    color: #fff;
+  }
+  
+  .card--danger {
+    background: #3a1c1c;
+    color: #fff;
+  }
+  
+  /* Animación de entrada */
+  @keyframes fadeInScale {
+    0% { opacity: 0; transform: scale(0.8); }
+    100% { opacity: 1; transform: scale(1); }
+  }
+  .animate-in {
+    animation: fadeInScale 1s ease both;
+  }
+  
+  /* Votación */
+  .vote-results__title {
+    color: #ffd700;
+    margin-top: 0;
+  }
+  
+  .vote-option {
+    margin: 1em 0;
+    padding: 1em;
+    border-radius: 8px;
+    background: #333;
+    color: #fff;
+    transition: all 0.3s ease;
+  }
+  
+  .vote-option--winner {
+    background: linear-gradient(90deg, #ffd700 60%, #fffbe6 100%);
+    color: #222;
+    font-weight: bold;
+    font-size: 1.05em;
+  }
+  
+  .vote-option__badge {
+    margin-left: 8px;
+    color: #b8860b;
+  }
+  
+  .vote-option__voters {
+    font-size: 0.9em;
+    opacity: 0.9;
+  }
+  
+  /* Sacrificio */
+  .sacrifice__title {
+    color: #ff4c4c;
+    margin-top: 0;
+  }
+  
+  .sacrifice__by {
+    font-size: 0.9em;
+    opacity: 0.9;
+  }
+  
+  /* Prompt de votación */
+  .vote__prompt {
+    margin: 0 0 0.5rem;
+    font-weight: 600;
+  }
+  
