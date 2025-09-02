@@ -1,5 +1,5 @@
 // src/pages/Game/Game.jsx
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import TimerInput from "../../components/TimerInput/TimerInput";
 import { useNavigate, useParams } from "react-router-dom";
 import { getCurrentChapter } from "../../services/chapterService";
@@ -138,7 +138,39 @@ const GameScreen = () => {
     navigate(`/feedback/${roomId}`);
   }
 
-  // =================== POLL DE VOTOS ===================
+  // =================== AUTO-RESOLVE (capítulos type: "auto") ===================
+  const autoOnceRef = useRef(false);
+  useEffect(() => {
+    if (!chapter || chapter.type !== "auto") return;
+    if (autoOnceRef.current) return;
+    autoOnceRef.current = true;
+
+    const handler = getChapterHandler(chapter);
+    (async () => {
+      const res =
+        (await handler.autoResolve?.({ roomId, players, chapter })) || {
+          announcements: [],
+          eliminated: [],
+          saved: [],
+          feedbackText: "El capítulo fue resuelto automáticamente.",
+          nextChapter: chapter.nextChapter || null,
+        };
+
+      await showFeedback({
+        groupOptionId: "auto",
+        feedbackText: res.feedbackText,
+        announcements: res.announcements || [],
+        saved: res.saved || [],
+        eliminated: res.eliminated || [],
+        groupIsCorrect: true,
+        nextChapterId: res.nextChapter || chapter.nextChapter || null,
+        gameOver: false,
+      });
+    })();
+  }, [chapter, players]); // eslint-disable-line
+  // ============================================================================
+
+  // =================== POLL DE VOTOS (vote) ===================
   useEffect(() => {
     if (!chapter || chapter?.type !== "vote") return;
     const handler = getChapterHandler(chapter);
@@ -155,7 +187,7 @@ const GameScreen = () => {
         relevantVotes = votes.filter((v) => v.playerId === saviorId);
         ready = relevantVotes.length >= 1;
       }
-      // Cap 15: solo vota Hoguera; cierra cuando TODOS los de Hoguera votan
+      // Cap 15: solo Hoguera; cierra cuando TODOS los de Hoguera votan
       else if (chapter.id === "chapter_15" && chapter.cap15?.roles?.bonfireIds) {
         const bonfireIds = chapter.cap15.roles.bonfireIds || [];
         relevantVotes = votes.filter((v) => bonfireIds.includes(v.playerId));
@@ -188,7 +220,13 @@ const GameScreen = () => {
               players,
               hoarder,
               winningOption,
-            })) || { announcements: [], eliminated: [], saved: [], feedbackText: null, nextChapter: null };
+            })) || {
+              announcements: [],
+              eliminated: [],
+              saved: [],
+              feedbackText: null,
+              nextChapter: null,
+            };
 
           await clearVotes(roomId);
 
@@ -202,7 +240,6 @@ const GameScreen = () => {
             saved: res.saved || [],
             eliminated: res.eliminated || [],
             groupIsCorrect: true,
-            // ⚠️ tomar nextChapter dinámico del handler (necesario en cap15)
             nextChapterId: res.nextChapter || chapter.nextChapter || null,
             gameOver: false,
           });
@@ -211,7 +248,7 @@ const GameScreen = () => {
     }, 1000);
     return () => clearInterval(interval);
   }, [chapter, players, hoarder, roomId]);
-  // =====================================================
+  // =============================================================
 
   const handleSacrifice = async (sacrificedPlayerId) => {
     setOptionsEnabled(false);
@@ -240,7 +277,7 @@ const GameScreen = () => {
     const responseTime = startTime ? Date.now() - startTime : null;
 
     if (!selectedOption) {
-      // Espectadores no penalizados
+      // Espectadores no penalizados en cap 12/15
       const isCap12Spectator =
         chapter?.id === "chapter_12" &&
         auth.currentUser?.uid !== chapter.cap12?.roles?.saviorId;
@@ -249,7 +286,8 @@ const GameScreen = () => {
         chapter?.id === "chapter_15" &&
         !(chapter.cap15?.roles?.bonfireIds || []).includes(auth.currentUser?.uid);
 
-      if (isCap12Spectator || isCap15Spectator) return;
+      // En capítulos "auto" no hay selección; no se penaliza.
+      if (chapter?.type === "auto" || isCap12Spectator || isCap15Spectator) return;
 
       await markPlayerEliminated(roomId, auth.currentUser.uid, chapter.id);
       await showFeedback({
@@ -352,13 +390,17 @@ const GameScreen = () => {
   const handler = getChapterHandler(chapter);
   const apply = (txt) => handler.applyTokens?.(txt, { hoarder }) ?? txt;
 
-  // Helpers de pertenencia a grupos del cap 15
   const isBonfire =
     chapter?.id === "chapter_15" &&
     (chapter.cap15?.roles?.bonfireIds || []).includes(auth.currentUser?.uid);
   const isCabin =
     chapter?.id === "chapter_15" &&
     (chapter.cap15?.roles?.cabinIds || []).includes(auth.currentUser?.uid);
+
+  // Si el capítulo es "auto", no mostramos UI (ya se resolvió y navega solo)
+  if (chapter?.type === "auto") {
+    return <div className="page-loading">Resolviendo…</div>;
+  }
 
   return (
     <div className="game">
