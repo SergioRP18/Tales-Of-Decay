@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import { GameScreen, GameOverScreen, JoinRoomScreen, LoadingScreen, LobbyScreen, LoginScreen, ResultsScreen, WaitingScreen, Home } from "../pages/index.jsx";
+import { GameScreen, GameOverScreen, JoinRoomScreen, LoadingScreen, LobbyScreen, LoginScreen, ResultsScreen, WaitingScreen, Home, FeedbackScreen } from "../pages/index.jsx";
 
 const Router = () => {
     return (
@@ -16,6 +16,7 @@ const Router = () => {
             <Route path="/waiting/:roomId" element={<WaitingScreen />} />
             <Route path="/results" element={<ResultsScreen />} />
             <Route path="/game-over" element={<GameOverScreen />} />
+            <Route path="/feedback/:roomId" element={<FeedbackScreen />} />
         </Routes>
         </BrowserRouter>
     );
