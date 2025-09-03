@@ -1,4 +1,5 @@
 import { useLocation, useNavigate } from "react-router-dom";
+import "../GameOver/GameOver.css"
 
 const GameOverScreen = () => {
     const location = useLocation();
@@ -15,7 +16,7 @@ const GameOverScreen = () => {
     }
 
     return (
-        <div style={{ textAlign: "center", marginTop: "10vh" }}>
+        <div class= "general-gOver" style={{ textAlign: "center", marginTop: "10vh" }}>
             <h1>Game Over</h1>
             <p>{message}</p>
             <button onClick={() => navigate("/")}>Volver al inicio</button>

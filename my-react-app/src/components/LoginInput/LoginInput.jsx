@@ -3,6 +3,7 @@ import { useDispatch } from "react-redux";
 import { signInAnonymous, saveUsername } from "../../store/store";
 import { joinRoom } from "../../services/roomService"; // Debes crear este archivo y función
 
+
 const LoginInput = () => {
     const [username, setUsername] = useState("");
     const [roomCode, setRoomCode] = useState("");
@@ -28,7 +29,7 @@ const LoginInput = () => {
 
     return (
         <>
-            <div>
+            <div className="general-login">
                 <form onSubmit={handleJoin}>
                     <input
                         type="text"
