@@ -12,6 +12,8 @@ import {
   markPlayerEliminated
 } from "../../services/gameStatsService";
 
+import "../Game/Game.css";
+
 const GameScreen = () => {
   const { roomId } = useParams();
   const [chapter, setChapter] = useState(null);
@@ -169,7 +171,9 @@ const GameScreen = () => {
   if (!chapter) return <div>No se encontró el capítulo.</div>;
 
   return (
+    
     <div className="gs">
+      
       {/* Cabecera: título/subtítulo y timer arriba derecha */}
       <div className="gs-header">
         <div className="gs-titleBlock">

@@ -1,159 +1,122 @@
-/* ===========================
-   LAYOUT GENERAL
-   =========================== */
-   #root { margin: 0; padding: 0; max-width: none; }
+/* --- CONTENEDOR PRINCIPAL --- */
+.gs {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  min-height: 100vh;
+  color: #fff;
+  font-family: "Amatic SC", cursive;
+  text-align: center;
+  padding: 2rem 1rem;
+}
 
-   .gs{
-     min-height: 100dvh;
-     display: grid;
-     /* header / opciones / footer  (narrativa fuera del flujo visual) */
-     grid-template-rows: auto 1fr auto;
-     justify-items: center;
-     align-items: start;
-     padding: 16px;
-     color: #fff;
-     text-align: center;
-     overflow: hidden;
-   }
-   
-   /* ===========================
-      HEADER (título, subtítulo, calavera, timer)
-      =========================== */
-   .gs-header{
-     position: relative;
-     width: 100%;
-     display: grid;
-     place-items: center;
-   }
-   
-   .gs-titleBlock{ margin-top: clamp(20px, 4vh, 34px); }
-   
-   .gs-title{
-     margin: 0;
-     font-size: clamp(30px, 8vw, 46px);
-     letter-spacing: 2px;
-     text-transform: uppercase;
-   }
-   
-   /* Subtítulo con líneas */
-   .gs-subtitle{
-     position: relative;
-     display: inline-block;
-     margin: 10px auto 12px;
-     font-size: clamp(14px, 3.8vw, 18px);
-     letter-spacing: 1px;
-     opacity: .9;
-   }
-   .gs-subtitle::before,
-   .gs-subtitle::after{
-     content: "";
-     position: absolute;
-     top: 50%;
-     width: 60px;
-     height: 1px;
-     background: currentColor;
-     opacity: .8;
-   }
-   .gs-subtitle::before{ right: 100%; margin-right: 10px; }
-   .gs-subtitle::after{  left: 100%; margin-left: 10px; }
-   
-   /* Calaverita en círculo (si luego usas PNG, sólo cambia este bloque) */
-   .gs-skull{
-     width: 28px; height: 28px;
-     border: 2px solid #fff; border-radius: 50%;
-     display: grid; place-items: center;
-     margin: 8px auto 0;
-     font-size: 14px;
-   }
-   
-   /* -------- Timer arriba derecha -------- */
-   .gs-header .gs-timer{
-     position: absolute;
-     right: 16px;
-     top: 6px;
-     font-size: clamp(22px, 6vw, 28px);
-     line-height: 1;
-     text-align: right;
-   }
-   
-   /* Limpia “pastillas/cajas” que pinte TimerInput dentro del contenedor */
-   .gs-header .gs-timer *{
-     background: transparent !important;
-     border: 0 !important;
-     box-shadow: none !important;
-     padding: 0 !important;
-     margin: 0 !important;
-     color: inherit !important;
-     font: inherit !important;
-   }
-   
-   /* Si TimerInput genera varios nodos (p.ej. label + número),
-      oculta todos menos el último: suele ser el número. */
-   .gs-header .gs-timer > *:not(:last-child){
-     display: none !important;
-   }
-   
-   /* ===========================
-      OCULTAR NARRATIVA EN ESTA VISTA (como el mock)
-      =========================== */
-   .gs-narrative{ display: none !important; }
-   
-   /* ===========================
-      OPCIONES (texto grande en columna)
-      =========================== */
-   .gs-options{
-     width: min(540px, 90%);
-     display: grid;
-     gap: clamp(18px, 3.6vh, 26px);
-     margin-top: clamp(20px, 5vh, 36px);
-     justify-items: center;
-   }
-   
-   /* Rompe el estilo global de button y déjalo como texto */
-   .gs-option{
-     all: unset;                 /* limpia estilos heredados (pastillas, etc.) */
-     display: inline-block;
-     color: inherit;
-     font-family: inherit;       /* Amatic */
-     font-size: clamp(24px, 6.8vw, 36px);
-     letter-spacing: .4px;
-     cursor: pointer;
-     padding: 4px 10px;
-     transition: transform .15s ease, opacity .2s ease;
-   }
-   .gs-option:hover{ transform: translateY(-1px); opacity: .95; }
-   .gs-option.is-selected{
-     text-decoration: underline;
-     text-underline-offset: 4px;
-   }
-   
-   /* ===========================
-      FOOTER (contador y logo)
-      =========================== */
-   .gs-footer{
-     width: 100%;
-     display: grid;
-     justify-items: center;
-     gap: 10px;
-     margin-bottom: 8px;
-   }
-   .gs-count{
-     font-size: clamp(40px, 14vw, 68px);
-     line-height: 1;
-     letter-spacing: 2px;
-     margin-bottom: 8px;
-   }
-   .gs-logo{
-     width: clamp(140px, 36%, 200px);
-     height: auto;
-     opacity: .95;
-   }
-   
-   /* ===========================
-      Tablet/Desktop
-      =========================== */
-   @media (min-width: 768px){
-     .gs-title{ font-size: 46px; }
-     .gs-options{ gap: 22px; }
-   }
-   
+/* --- CABECERA (Título y tiempo) --- */
+.gs-header {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.gs-title {
+  font-size: 3rem;
+  font-weight: 700;
+  margin-bottom: 0.5rem;
+}
+
+.gs-subtitle,
+.gs-timer {
+  font-size: 1.5rem;
+  font-weight: 400;
+  color: #ccc;
+  margin: 0.3rem 0;
+}
+
+/* --- NARRATIVA --- */
+.gs-narrative {
+  margin: 1.5rem auto;
+  max-width: 600px;
+  font-size: 1.4rem;
+  font-weight: 400;
+  line-height: 1.4;
+  color: #eaeaea;
+}
+
+/* --- OPCIONES --- */
+.gs-options {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr); /* Fuerza siempre 2 columnas */
+  gap: 1rem; /* Espacio entre botones */
+  justify-content: center;
+  max-width: 500px;
+  margin: 2rem auto;
+}
+
+.gs-option {
+  padding: 0.8rem 1rem;
+  background: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 1.4rem;
+  font-weight: 700;
+  color: #000;
+  cursor: pointer;
+  transition: transform 0.2s ease, background 0.2s ease;
+  font-family: "Amatic SC", cursive;
+  text-align: center;
+}
+.gs-option:hover:not(:disabled) {
+  transform: scale(1.05);
+  background: #f1f1f1;
+}
+
+.gs-option.is-selected {
+  background: #ddd;
+}
+
+.gs-option:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* --- FOOTER --- */
+.gs-footer {
+  margin-top: auto;
+  padding: 1rem 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.gs-count {
+  font-size: 1.2rem;
+  color: #aaa;
+  margin-bottom: 0.5rem;
+}
+
+.gs-logo {
+  width: 160px;
+  height: auto;
+}
+
+
+/* --- RESPONSIVE --- */
+@media (max-width: 480px) {
+  .gs-options {
+    grid-template-columns: 1fr;
+    gap: 0.8rem;
+  }
+
+  .gs-title {
+    font-size: 2.2rem;
+  }
+
+  .gs-subtitle,
+  .gs-timer {
+    font-size: 1.2rem;
+  }
+
+  .gs-option {
+    font-size: 1.2rem;
+  }
+}
