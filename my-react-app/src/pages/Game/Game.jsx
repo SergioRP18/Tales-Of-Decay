@@ -463,7 +463,7 @@ const GameScreen = () => {
       <h2 className="game__title">{chapter.title}</h2>
       <p className="game__narrative">{apply(chapter.narrative)}</p>
 
-      <TimerInput isAnswerPhase={true} answerSeconds={3} onAnswerEnd={handleTimerEnd} />
+      <TimerInput isAnswerPhase={true} answerSeconds={45} onAnswerEnd={handleTimerEnd} />
 
       {/* DECISION NORMAL */}
       {chapter.type === "decision" && chapter.options && (
