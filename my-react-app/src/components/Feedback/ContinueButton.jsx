@@ -1,23 +1,29 @@
-import { useState } from "react";
+// src/components/Feedback/ContinueButton.jsx
+import React, { useState } from "react";
 import { applyResolution } from "../../services/feedbackService";
 
-export default function ContinueButton({ roomId, gameOver, onNavigate }) {
-  const [loading, setLoading] = useState(false);
+export default function ContinueButton({
+  roomId,
+  gameOver = false,        // opcional, lo decide el service leyendo lastResolution
+  eliminatedSelf = false,
+  onNavigate,              // (next) => void  |  next ∈ {"GAME_OVER_SELF","LOBBY","NEXT"}
+}) {
+  const [busy, setBusy] = useState(false);
 
   const handleClick = async () => {
-    if (loading) return;
-    setLoading(true);
+    if (busy) return;
+    setBusy(true);
     try {
-      const out = await applyResolution(roomId);
-      onNavigate?.(out?.next ?? null);
+      const next = await applyResolution(roomId, { eliminatedSelf });
+      if (onNavigate) onNavigate(next);
     } finally {
-      setLoading(false);
+      setBusy(false);
     }
   };
 
   return (
-    <button className="feedback-continue" onClick={handleClick} disabled={loading}>
-      {loading ? "Procesando..." : gameOver ? "Volver al lobby" : "Continuar"}
+    <button className="btn-option" disabled={busy} onClick={handleClick}>
+      {busy ? "Procesando…" : gameOver ? "Volver" : "Continuar"}
     </button>
   );
 }

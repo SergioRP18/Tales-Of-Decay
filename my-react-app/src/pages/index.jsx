@@ -9,4 +9,8 @@ export { default as ResultsScreen } from "./Results/Results";
 export { default as WaitingScreen } from "./WaitingScreen/WaitingScreen";
 export { default as Home } from "./Home/Home";
 export {default as FeedbackScreen} from "./FeedbackScreen/FeedbackScreen";
+export {default as PreChapter} from "./PreChapter/PreChapter"
+export { default as Survivor } from "./Survivor/Survivor";
+
+
 

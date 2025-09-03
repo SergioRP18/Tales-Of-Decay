@@ -1,6 +1,6 @@
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import { GameScreen, GameOverScreen, JoinRoomScreen, LoadingScreen, LobbyScreen, LoginScreen, ResultsScreen, WaitingScreen, Home, FeedbackScreen } from "../pages/index.jsx";
+import { GameScreen, GameOverScreen, JoinRoomScreen, LoadingScreen, LobbyScreen, LoginScreen, ResultsScreen, WaitingScreen, Home, FeedbackScreen, PreChapter, Survivor } from "../pages/index.jsx";
 
 const Router = () => {
     return (
@@ -10,13 +10,15 @@ const Router = () => {
             <Route path="/select" element={<Home />} />
             <Route path="/login" element={<LoginScreen />} />
             <Route path="/lobby" element={<LobbyScreen />} />
+            <Route path="/precapitulo/:roomId" element={<PreChapter />} />
             <Route path="/game/:roomId" element={<GameScreen />} />
+            <Route path="/feedback/:roomId" element={<FeedbackScreen />} />
             <Route path="/join-room" element={<JoinRoomScreen />} />
             <Route path="/join-room/:roomId" element={<JoinRoomScreen />} />
             <Route path="/waiting/:roomId" element={<WaitingScreen />} />
             <Route path="/results" element={<ResultsScreen />} />
+            <Route path="/supervivientes/:roomId" element={<Survivor />} />
             <Route path="/game-over" element={<GameOverScreen />} />
-            <Route path="/feedback/:roomId" element={<FeedbackScreen />} />
         </Routes>
         </BrowserRouter>
     );

@@ -1,0 +1,61 @@
+.page-loading {
+    padding: 24px;
+    text-align: center;
+  }
+  
+  .pre {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    text-align: center;
+    padding: 2em;
+  }
+  
+  .pre__title {
+    margin: 0 0 0.25rem;
+  }
+  
+  .pre__highlight {
+    font-size: 1.5em;
+    margin-bottom: 0.5em;
+    color: #ffd700;
+  }
+  
+  .pre__message {
+    font-size: 1.2em;
+    margin-bottom: 1em;
+  }
+  
+  .pre__ready {
+    font-size: 0.95em;
+    opacity: 0.85;
+    margin-bottom: 1em;
+  }
+  
+  /* Botón reutilizable */
+  .btn {
+    padding: 1em 2em;
+    border: none;
+    border-radius: 12px;
+    font-size: 1.1em;
+    cursor: pointer;
+    box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+    transition: transform 0.08s ease, box-shadow 0.2s ease;
+  }
+  
+  .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+  }
+  
+  .btn:active {
+    transform: translateY(0);
+  }
+  
+  .btn--gold {
+    background-color: #ffd700;
+    color: #222;
+  }
+  

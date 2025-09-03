@@ -1,56 +1,59 @@
-import { getFirestore, doc, setDoc, updateDoc, arrayUnion } from "firebase/firestore";
+// src/services/gameStatsService.js
+import {
+  getFirestore, doc, setDoc, serverTimestamp, arrayUnion
+} from "firebase/firestore";
 
-export async function savePlayerAnswer(roomId, playerId, username, chapterId, selectedOption, isCorrect, responseTime) {
+/**
+ * IMPORTANTE:
+ * Firestore NO permite serverTimestamp() DENTRO de arrayUnion.
+ * Usamos atMs: Date.now() dentro del array y mantenemos updatedAt con serverTimestamp().
+ */
+
+export async function savePlayerVote(roomId, uid, username, chapterId, optionId, responseTime) {
   const db = getFirestore();
-  const statsRef = doc(db, "rooms", roomId, "gameStats", playerId);
-  await setDoc(statsRef, {
-    playerId,
+  const ref = doc(db, "rooms", roomId, "gameStats", uid);
+  const nowMs = Date.now();
+  await setDoc(ref, {
+    uid,
     username,
-    roomId,
-    answers: arrayUnion({
-      chapterId,
-      selectedOption,
-      isCorrect,
-      responseTime, // <-- Guarda el tiempo de respuesta
-      timestamp: Date.now()
-    })
-  }, { merge: true });
-
-  if (!isCorrect && selectedOption === "eliminate_player") {
-    const updatedPlayers = players.filter(p => p.uid !== playerId);
-    await updateDoc(roomRef, { players: updatedPlayers });
-  }
-};
-
-export async function savePlayerVote(roomId, playerId, username, chapterId, optionId, responseTime) {
-  const db = getFirestore();
-  const statsRef = doc(db, "rooms", roomId, "gameStats", playerId);
-  await setDoc(statsRef, {
-    playerId,
-    username,
-    roomId,
     votes: arrayUnion({
       chapterId,
       optionId,
-      responseTime, // <-- Guarda el tiempo de respuesta
-      timestamp: Date.now()
-    })
+      responseTime: responseTime ?? null,
+      atMs: nowMs,
+    }),
+    updatedAt: serverTimestamp()
   }, { merge: true });
 }
 
-export async function markPlayerEliminated(roomId, playerId, chapterId) {
+export async function savePlayerAnswer(roomId, uid, username, chapterId, optionId, isCorrect, responseTime) {
   const db = getFirestore();
-  const statsRef = doc(db, "rooms", roomId, "gameStats", playerId);
-  await updateDoc(statsRef, {
-    eliminatedAtChapter: chapterId,
-    survived: false
-  });
+  const ref = doc(db, "rooms", roomId, "gameStats", uid);
+  const nowMs = Date.now();
+  await setDoc(ref, {
+    uid,
+    username,
+    answers: arrayUnion({
+      chapterId,
+      optionId,
+      isCorrect: !!isCorrect,
+      responseTime: responseTime ?? null,
+      atMs: nowMs,
+    }),
+    updatedAt: serverTimestamp()
+  }, { merge: true });
 }
 
-export async function markPlayerSurvived(roomId, playerId) {
+export async function markPlayerEliminated(roomId, uid, chapterId) {
   const db = getFirestore();
-  const statsRef = doc(db, "rooms", roomId, "gameStats", playerId);
-  await updateDoc(statsRef, {
-    survived: true
-  });
+  const ref = doc(db, "rooms", roomId, "gameStats", uid);
+  const nowMs = Date.now();
+  await setDoc(ref, {
+    uid,
+    eliminated: arrayUnion({
+      chapterId,
+      atMs: nowMs,
+    }),
+    updatedAt: serverTimestamp()
+  }, { merge: true });
 }

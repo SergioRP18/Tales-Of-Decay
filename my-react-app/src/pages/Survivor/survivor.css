@@ -1,0 +1,13 @@
+/* src/pages/Survivors/survivors.css */
+.survivors-page { padding: 24px; }
+.center { display: flex; justify-content: center; align-items: center; min-height: 60vh; }
+.card { padding: 16px; border-radius: 12px; background: #1c1c1c; color: #fff; max-width: 560px; width: 100%; }
+.card--dark { background: #101014; }
+.title { margin: 0 0 8px; }
+.muted { color: #a0a0a0; }
+.survivors-list { margin: 16px 0; padding-left: 20px; }
+.survivor { margin: 6px 0; }
+.survivor__name { font-weight: 600; }
+.survivors-actions { margin-top: 16px; display: flex; justify-content: center; }
+.btn-option { background: #2b2f3a; color: #fff; border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; }
+.btn-option:hover { opacity: 0.9; }
