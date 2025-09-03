@@ -98,6 +98,12 @@
   width: 160px;
   height: auto;
 }
+.loading-text{
+  color:#ffff
+}
+.error-text{
+  color: #ffff;
+}
 
 
 /* --- RESPONSIVE --- */

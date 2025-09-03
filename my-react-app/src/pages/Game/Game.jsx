@@ -167,8 +167,8 @@ const GameScreen = () => {
     setStartTime(Date.now());
   }, [chapter]);
 
-  if (loading) return <div>Cargando capítulo...</div>;
-  if (!chapter) return <div>No se encontró el capítulo.</div>;
+  if (loading) return <div className="loading-text">Cargando capítulo...</div>;
+  if (!chapter) return <div className="error-text">No se encontró el capítulo.</div>;
 
   return (
     
